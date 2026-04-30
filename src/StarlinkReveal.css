@@ -1,0 +1,65 @@
+/* StarlinkReveal — page 3 typography & text-group layout.
+ *
+ * The text group sits inside the sticky viewport layer at the centre of the
+ * screen by default. GSAP + ScrollTrigger then animate top/left/scale to
+ * carry the whole group to the top-right corner as the user keeps scrolling
+ * within the section. Per-character reveal is driven separately by
+ * <ScrollFloat/>.
+ */
+
+.starship-copy-group {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 80;
+
+  width: min(94vw, 1700px);
+  max-width: 94vw;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.45rem, 1vw, 1rem);
+
+  text-align: center;
+  pointer-events: none;
+  color: #fff;
+  opacity: 1;
+  visibility: visible;
+  mix-blend-mode: normal;
+}
+
+.starship-copy-row {
+  width: 100%;
+  text-align: center;
+}
+
+.starship-copy-title {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: clamp(3.0rem, 5.6vw, 7rem);
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  text-transform: uppercase;
+}
+
+.starship-copy-line {
+  display: inline-block;
+  text-align: center;
+  font-size: clamp(1.05rem, 1.65vw, 2.1rem);
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+
+@media (max-width: 900px) {
+  .starship-copy-title {
+    white-space: normal;
+    font-size: clamp(2.3rem, 10vw, 4.5rem);
+  }
+
+  .starship-copy-line {
+    font-size: clamp(0.95rem, 4vw, 1.4rem);
+  }
+}

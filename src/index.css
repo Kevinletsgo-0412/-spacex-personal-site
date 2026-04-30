@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background: #000000;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.oryzo-glow-wrapper {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+}
+
+.oryzo-gradient-layer {
+  position: absolute; top: -50%; left: -50%; right: -50%; bottom: -50%;
+  background: conic-gradient(from 0deg, #ff0a5c, #00d2ff, #a6ff00, #ff7b00, #ff0a5c);
+  filter: blur(60px) saturate(200%) contrast(150%);
+  animation: spin 15s linear infinite;
+  z-index: 1;
+}
+
+.oryzo-black-cover {
+  position: absolute;
+  top: 4vw; bottom: 4vw; left: 4vw; right: 4vw; /* 你就是在这里调厚度 */
+  background-color: #000000;
+  border-radius: 24px;
+  box-shadow: 0 0 10px 2px #000, 0 0 40px 10px #000, 0 0 120px 20px #000; /* 在这里调柔和度 */
+  z-index: 2;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg) scale(1) translate(0, 0); }
+  33% { transform: rotate(120deg) scale(1.05) translate(-2%, 1%); }
+  66% { transform: rotate(240deg) scale(0.95) translate(1%, -2%); }
+  100% { transform: rotate(360deg) scale(1) translate(0, 0); }
+}

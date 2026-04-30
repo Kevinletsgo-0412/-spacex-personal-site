@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceX Loading</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000; /* 纯黑背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .logo-container {
+            /* 这里控制 Logo 的最终显示大小 */
+            width: 30vw; 
+            max-width: 400px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-20%, -80%);
+        }
+
+        /* 隐藏填充，只显示描边 */
+        .x-path {
+            fill: none;
+            /* 因为 viewBox 坐标很小，这里的线宽也要对应改小，否则会变成一坨 */
+            stroke-width: 0.3; 
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 底层浅灰色外轮廓 */
+        .x-base {
+            stroke: rgba(255, 255, 255, 0.15); 
+        }
+
+        /* 顶层白色发光进度条 */
+        .x-progress {
+            stroke: #ffffff; 
+            /* 光晕效果也要按比例缩小 */
+            filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.8)); 
+            /* 动画：名称 时间 匀速 播放次数 结束后保持状态 */
+            animation: drawPath 1.2s linear 3 forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="logo-container">
+        <svg viewBox="-2 -2 38 24" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
+            
+            <path class="x-path x-base" d="M31.937 9.287c-0.011 0-0.016-0.005-0.020-0.005-0.011 0-0.021 0.005-0.032 0.011-20.172 2.031-29.651 10.801-31.885 12.959l0.297 0.468h3.525c9.161-9.213 21.541-12.271 28.089-13.276l0.005 0.005c0.004 0 0.009-0.011 0.015-0.011 0.037-0.005 0.068-0.036 0.068-0.077 0-0.037-0.027-0.063-0.063-0.073zM0.505 14.011l-0.213 0.401 4.328 3.156c0.875-0.511 1.771-0.984 2.683-1.432l-2.901-2.125zM10.125 18.197c-0.719 0.532-1.448 1.095-2.235 1.756l3.803 2.765h3.943l0.167-0.359z" />
+            
+            <path id="animated-line" class="x-path x-progress" d="M31.937 9.287c-0.011 0-0.016-0.005-0.020-0.005-0.011 0-0.021 0.005-0.032 0.011-20.172 2.031-29.651 10.801-31.885 12.959l0.297 0.468h3.525c9.161-9.213 21.541-12.271 28.089-13.276l0.005 0.005c0.004 0 0.009-0.011 0.015-0.011 0.037-0.005 0.068-0.036 0.068-0.077 0-0.037-0.027-0.063-0.063-0.073zM0.505 14.011l-0.213 0.401 4.328 3.156c0.875-0.511 1.771-0.984 2.683-1.432l-2.901-2.125zM10.125 18.197c-0.719 0.532-1.448 1.095-2.235 1.756l3.803 2.765h3.943l0.167-0.359z" />
+        </svg>
+    </div>
+
+    <script>
+        const path = document.getElementById('animated-line');
+        const pathLength = path.getTotalLength();
+
+        path.style.strokeDasharray = pathLength;
+        path.style.strokeDashoffset = pathLength;
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes drawPath {
+                0% {
+                    stroke-dashoffset: ${pathLength};
+                }
+                100% {
+                    stroke-dashoffset: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

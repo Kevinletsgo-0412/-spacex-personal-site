@@ -1,0 +1,64 @@
+/* ━━━ React Bits TiltedCard —— 容器化改造版样式 ━━━━━━━━━━ */
+
+.tilted-card-figure {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 800px;
+  display: block;       /* block 保证 figure 自身可接受 flex-1 等外部布局 class */
+  margin: 0;            /* 清掉 <figure> 默认外边距 */
+}
+
+.tilted-card-mobile-alert {
+  position: absolute;
+  top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .tilted-card-mobile-alert {
+    display: block;
+  }
+  .tilted-card-caption {
+    display: none;
+  }
+}
+
+/*
+  关键：inner 必须是 preserve-3d，才能让 children 真正在 3D 空间里倾斜。
+  · absolute + inset:0 → 始终填满 figure
+  · display:flex + align-items:stretch → children 的 flex-1/h-full 原封保留可用
+  · will-change 提示合成器提升为独立 layer。                              */
+.tilted-card-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.tilted-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  will-change: transform;
+  transform: translateZ(30px);
+}
+
+.tilted-card-caption {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 4px;
+  background-color: #fff;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #2d2d2d;
+  opacity: 0;
+  z-index: 3;
+}
