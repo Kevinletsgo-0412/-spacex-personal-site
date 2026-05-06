@@ -19,7 +19,7 @@ function App() {
       <OrbitGallery ready={!isLoading} />
 
       {/* Screen 3 — Starlink text wash */}
-      <StarlinkReveal />
+      <StarlinkReveal ready={!isLoading} />
 
       {/* Screen 4 (word reveal) + transition → Screen 5 (stars + image) */}
       <ConstellationReveal />
