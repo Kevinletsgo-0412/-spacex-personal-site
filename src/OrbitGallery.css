@@ -1,0 +1,298 @@
+/* OrbitGallery — Page 2 Orbital Archive UI.
+ *
+ * All "archive system" chrome lives here so OrbitGallery.jsx stays focused on
+ * 3D scene + parabola card layout. Colors strictly stay inside the tokens
+ * declared in DESIGN_SYSTEM.md §3.1:
+ *   --off-white       #f5f5f7   (cool archive background)
+ *   --orbit-blue      #1f5a99   (active outline, dividers, status badges)
+ *   --text-ink        #0a0a0a   (primary type)
+ *   --accent-deep-red #4a0404   (FAILURE status only)
+ *
+ * Mono stack matches Tailwind's default font-mono so it composes cleanly with
+ * the existing satellite-label `font-mono` usage on the globe.
+ */
+
+:root {
+  --orbit-archive-bg: #f5f5f7;
+  --orbit-archive-bg-deep: #ebeced;
+  --orbit-archive-blue: #1f5a99;
+  --orbit-archive-ink: #0a0a0a;
+  --orbit-archive-fail: #4a0404;
+}
+
+.orbit-archive-section {
+  background: var(--orbit-archive-bg);
+}
+
+/* ─── Top archive header ───────────────────────────────────────────────── */
+.orbit-archive-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(1.1rem, 2vw, 1.75rem) clamp(1.5rem, 3vw, 2.5rem);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.62rem, 0.78vw, 0.74rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
+}
+.orbit-archive-header-title {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 600;
+}
+.orbit-archive-header-divider {
+  margin: 0 0.7em;
+  color: var(--orbit-archive-blue);
+}
+.orbit-archive-header-count {
+  color: rgba(0, 0, 0, 0.55);
+}
+.orbit-archive-header-hint {
+  color: rgba(0, 0, 0, 0.45);
+}
+.orbit-archive-header-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.6em;
+  background: var(--orbit-archive-blue);
+  border-radius: 999px;
+  vertical-align: middle;
+  animation: orbit-archive-pulse 2.6s ease-in-out infinite;
+}
+@keyframes orbit-archive-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* ─── Card frame (image + metadata strip stacked) ──────────────────────── */
+.orbit-card {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, left, top;
+}
+.orbit-card-frame {
+  position: relative;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+@media (min-width: 768px)  { .orbit-card-frame { width: 260px; } }
+@media (min-width: 1024px) { .orbit-card-frame { width: 300px; } }
+
+.orbit-card-image {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--orbit-archive-bg-deep);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  outline: 1.5px solid transparent;
+  outline-offset: 4px;
+  transition: outline-color 220ms ease, outline-offset 220ms ease;
+}
+
+.orbit-card-active .orbit-card-image {
+  outline-color: rgba(31, 90, 153, 0.55);
+  outline-offset: 6px;
+}
+
+.orbit-card-active-chip {
+  position: absolute;
+  top: -1.5em;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.58rem, 0.72vw, 0.7rem);
+  letter-spacing: 0.22em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--orbit-archive-blue);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+.orbit-card-active-chip::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 0.9em;
+  background: var(--orbit-archive-blue);
+}
+.orbit-card-active .orbit-card-active-chip {
+  opacity: 1;
+}
+
+/* metadata strip below the card image */
+.orbit-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.54rem, 0.7vw, 0.65rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+}
+.orbit-card-meta-code {
+  color: rgba(0, 0, 0, 0.8);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.orbit-card-meta-date {
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+.orbit-card-meta-status {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--orbit-archive-blue);
+}
+.orbit-card-meta-status[data-status="OPERATIONAL"] {
+  color: var(--orbit-archive-ink);
+}
+.orbit-card-meta-status[data-status="FAILURE"] {
+  color: var(--orbit-archive-fail);
+}
+
+/* ─── Archive placeholder (when image file isn't dropped in yet) ───────── */
+.orbit-archive-placeholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: var(--orbit-archive-bg-deep);
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(0, 0, 0, 0.03) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.03) 0 1px, transparent 1px 22px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.5rem, 1.2vw, 0.95rem);
+}
+.orbit-archive-placeholder-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(31, 90, 153, 0.45);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(0.5rem, 1vw, 0.85rem);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+.orbit-archive-placeholder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: clamp(0.5rem, 0.62vw, 0.6rem);
+}
+.orbit-archive-placeholder-tag {
+  color: var(--orbit-archive-blue);
+  font-weight: 600;
+}
+.orbit-archive-placeholder-code {
+  color: rgba(0, 0, 0, 0.65);
+}
+.orbit-archive-placeholder-status {
+  color: rgba(0, 0, 0, 0.5);
+}
+.orbit-archive-placeholder-bars {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  height: 14px;
+}
+.orbit-archive-placeholder-bars > span {
+  display: block;
+  background: rgba(31, 90, 153, 0.18);
+}
+.orbit-archive-placeholder-bars > span:nth-child(3),
+.orbit-archive-placeholder-bars > span:nth-child(7) {
+  background: rgba(31, 90, 153, 0.42);
+}
+
+/* ─── Centre readout panel (fired by active card) ──────────────────────── */
+.orbit-archive-readout {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: 92%;
+  max-width: 560px;
+  text-align: center;
+  pointer-events: none;
+}
+.orbit-archive-readout-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.62rem, 0.8vw, 0.74rem);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 0.55rem;
+}
+.orbit-archive-readout-program {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 600;
+}
+.orbit-archive-readout-divider {
+  margin: 0 0.55em;
+  color: var(--orbit-archive-blue);
+}
+.orbit-archive-readout-code {
+  color: rgba(0, 0, 0, 0.55);
+}
+.orbit-archive-readout-title {
+  font-size: clamp(1.1rem, 1.55vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--orbit-archive-ink);
+  margin-bottom: 0.55rem;
+}
+.orbit-archive-readout-tag {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.6rem, 0.74vw, 0.7rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+.orbit-archive-readout-date {
+  color: rgba(0, 0, 0, 0.55);
+}
+.orbit-archive-readout-status {
+  padding: 0.16em 0.6em;
+  border: 1px solid rgba(31, 90, 153, 0.4);
+  font-weight: 600;
+  color: var(--orbit-archive-blue);
+}
+.orbit-archive-readout-status[data-status="OPERATIONAL"] {
+  color: var(--orbit-archive-ink);
+  border-color: rgba(0, 0, 0, 0.45);
+}
+.orbit-archive-readout-status[data-status="FAILURE"] {
+  color: var(--orbit-archive-fail);
+  border-color: rgba(74, 4, 4, 0.45);
+}
+.orbit-archive-readout-desc {
+  font-size: clamp(0.72rem, 0.92vw, 0.85rem);
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.62);
+  max-width: 440px;
+  margin: 0 auto;
+}
