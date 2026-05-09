@@ -1,0 +1,206 @@
+/* SystemsTimeline — Page 3 (replaces StarlinkReveal).
+ *
+ * Phase 1a: STATIC SKELETON only. No animation.
+ * Color tokens follow DESIGN_SYSTEM.md §3.1:
+ *   --systems-bg     #f5f5f7   off-white archive background (matches Page 2)
+ *   --systems-ink    #0a0a0a   primary type
+ *   --systems-blue   #1f5a99   pulse + dividers (orbit-blue token)
+ *   --systems-axis   rgba(0,0,0,0.85)  vertical timeline line
+ */
+
+:root {
+  --systems-bg: #f5f5f7;
+  --systems-ink: #0a0a0a;
+  --systems-axis: rgba(0, 0, 0, 0.85);
+  --systems-blue: #1f5a99;
+}
+
+.systems-timeline-section {
+  background: var(--systems-bg);
+}
+
+/* ─── Top header ───────────────────────────────────────────────── */
+.systems-timeline-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(1.1rem, 2vw, 1.75rem) clamp(1.5rem, 3vw, 2.5rem);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.62rem, 0.78vw, 0.74rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
+}
+.systems-timeline-header-group {
+  display: flex;
+  align-items: center;
+}
+.systems-timeline-header-title {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 600;
+}
+.systems-timeline-header-divider {
+  margin: 0 0.7em;
+  color: var(--systems-blue);
+}
+.systems-timeline-header-count,
+.systems-timeline-header-hint {
+  color: rgba(0, 0, 0, 0.5);
+}
+.systems-timeline-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.65em;
+  background: var(--systems-blue);
+  border-radius: 999px;
+  animation: systems-timeline-pulse 2.6s ease-in-out infinite;
+}
+@keyframes systems-timeline-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* ─── Stage layout (two columns) ───────────────────────────────── */
+.systems-timeline-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  align-items: center;
+  padding-top: clamp(4.5rem, 9vh, 6rem);
+  padding-bottom: clamp(2rem, 5vh, 4rem);
+  padding-left: clamp(2rem, 5vw, 5rem);
+  padding-right: clamp(2rem, 5vw, 5rem);
+  gap: clamp(2rem, 4vw, 4rem);
+}
+
+/* ─── Left column: huge headline ───────────────────────────────── */
+.systems-timeline-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.systems-timeline-line {
+  display: block;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  font-size: clamp(3.5rem, 9vw, 8.5rem);
+  line-height: 0.92;
+  color: var(--systems-ink);
+}
+
+/* word-by-word reveal: clip wrapper + sliding word.
+ * Initial state is set in CSS too, so words stay hidden between first paint
+ * and the GSAP set call (no flash). GSAP then drives the slide-up reveal. */
+.systems-timeline-word-clip {
+  display: inline-block;
+  overflow: hidden;
+  line-height: inherit;
+  vertical-align: bottom;
+}
+.systems-timeline-word {
+  display: inline-block;
+  line-height: inherit;
+  transform: translateY(105%);
+  will-change: transform;
+}
+
+/* ─── Right column: timeline track ─────────────────────────────── */
+.systems-timeline-track {
+  position: relative;
+  display: flex;
+  align-self: center;
+  width: 100%;
+}
+.systems-timeline-items {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 clamp(1.75rem, 3vw, 2.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.1rem, 2.5vh, 2rem);
+  width: 100%;
+}
+.systems-timeline-items::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.4em;
+  bottom: 0.4em;
+  width: 1px;
+  background: var(--systems-axis);
+}
+
+.systems-timeline-item {
+  position: relative;
+  max-width: 32em;
+}
+.systems-timeline-item-dot {
+  position: absolute;
+  left: calc(-1 * clamp(1.75rem, 3vw, 2.75rem) - 4.5px);
+  top: 0.65em;
+  width: 9px;
+  height: 9px;
+  background: var(--systems-ink);
+  border-radius: 999px;
+}
+.systems-timeline-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.6rem, 0.78vw, 0.72rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.systems-timeline-item-code {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.systems-timeline-item-date {
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+.systems-timeline-item-title {
+  font-size: clamp(1rem, 1.3vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--systems-ink);
+  margin: 0.4rem 0 0.25rem;
+}
+.systems-timeline-item-summary {
+  font-size: clamp(0.72rem, 0.88vw, 0.82rem);
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.55);
+  margin: 0;
+  max-width: 32ch;
+}
+
+/* ─── Mobile fallback (basic; polish in a later phase) ─────────── */
+@media (max-width: 768px) {
+  .systems-timeline-stage {
+    grid-template-columns: 1fr;
+    align-items: start;
+    padding-top: clamp(4rem, 12vh, 5rem);
+    gap: clamp(1.75rem, 5vw, 2.75rem);
+    overflow-y: auto;
+  }
+  .systems-timeline-line {
+    font-size: clamp(2.4rem, 13vw, 4.6rem);
+  }
+  .systems-timeline-track {
+    align-self: start;
+  }
+}
