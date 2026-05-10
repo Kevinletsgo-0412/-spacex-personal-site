@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/constellationreveal.jsx","./src/herovideo.jsx","./src/loadingscreen.jsx","./src/orbitgallery.jsx","./src/starlinkreveal.jsx","./src/main.tsx","./src/components/scrollfloat.jsx","./src/components/tiltedcard.jsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/constellationreveal.jsx","./src/herovideo.jsx","./src/loadingscreen.jsx","./src/orbitgallery.jsx","./src/starlinkreveal.jsx","./src/systemstimeline.jsx","./src/main.tsx","./src/components/scrollfloat.jsx","./src/components/tiltedcard.jsx"],"version":"5.9.3"}

@@ -1,22 +1,56 @@
-/* SystemsTimeline — Page 3 (replaces StarlinkReveal at the App.tsx call site).
+/* SystemsTimeline — Page 3.
  *
- * Phase 1b: word-by-word reveal on the LEFT headline only.
- *   • headline text is split per-line into words; each word lives inside a
- *     <span class="word-clip"><span class="word">…</span></span> wrapper
- *   • clip has overflow:hidden; word starts at translateY(105%) so it sits
- *     just below the baseline; GSAP slides it up to translateY(0)
- *   • single ScrollTrigger fires once when the section enters viewport,
- *     plays the stagger; words remain in place after — no scrub, no reverse
- *   • gating respects DESIGN_SYSTEM.md §5.1 (ready prop) and §5.2 spirit
- *     (document.fonts.ready before measuring); cleanup via gsap.context()
- *   • right-side timeline track stays STATIC this phase
+ * 900vh sticky-pinned section. One ScrollTrigger drives one master timeline
+ * with three phases:
  *
- * src/StarlinkReveal.jsx and src/StarlinkReveal.css remain on disk as a
- * rollback artefact; they are simply no longer imported by App.tsx.
+ *   Phase A (0.05 → 0.32)  Per-letter "ink fills the glyph from below".
+ *                          The letter itself does NOT move — each <span> is
+ *                          fixed in layout, color: transparent (so it holds
+ *                          inline space), with a vertical linear-gradient
+ *                          background that's clipped to the glyph shape via
+ *                          background-clip: text. A CSS custom property
+ *                          --letter-fill drives the gradient stop from 0
+ *                          (no ink) to 1 (full ink). DOM order is line-by-
+ *                          line, char-by-char, so GSAP's stagger from:'start'
+ *                          gives left→right, top→bottom for free.
  *
- * NOTE: headline copy and timeline records are placeholders for layout review.
+ *   Phase B (0.44 → 0.52)  Vertical axis grows from bottom to top
+ *                          (scaleY 0 → 1, origin: bottom). Headline dims to
+ *                          0.55 to hand focus over to the timeline scenes.
+ *
+ *   Phase C (0.52 → 0.98)  7 milestone scenes, queued sequentially. Each
+ *                          scene is a full-viewport group containing one
+ *                          marker (on axis) AND one panel (on the right);
+ *                          the whole group is animated together via the
+ *                          scene container's transform.
+ *
+ *                          Each scene travels yPercent: 120 → 40 → 0 →
+ *                          -120 (off-screen below → centred → off-screen
+ *                          above). SCENE_SPACING > SCENE_DURATION, so the
+ *                          previous scene has already exited before the
+ *                          next one enters — placeholders never overlap.
+ *                          opacity is 0 only at the very entry/exit edges;
+ *                          the visible change comes from y motion, not
+ *                          crossfade.
+ *
+ *                          No static dots on the axis — the marker only
+ *                          exists as part of the active scene.
+ *
+ * Coordination notes:
+ *   • document.fonts.ready is awaited so per-letter widths are final before
+ *     the timeline's stagger window is computed.
+ *   • ScrollTrigger.refresh() is called once after build, so this trigger
+ *     and OrbitGallery's pin-spacer trigger settle against the final layout.
+ *   • gsap.context() scopes everything; ctx.revert() handles cleanup on
+ *     unmount / hot reload.
+ *   • Initial states are mirrored in CSS too — first paint matches the
+ *     animation's starting state, so there is no flash.
+ *
+ * MILESTONES is a plain array; to plug a real cutout image in, set the
+ * `image` field to a path under /public (e.g. '/gallery/falcon1.webp').
+ * The panel renderer auto-swaps the placeholder frame for an <img>.
  */
-import { Fragment, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
@@ -24,64 +58,129 @@ import './SystemsTimeline.css'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const HEADLINE = ['TWO', 'DECADES.', 'ONE', 'SYSTEM.']
-const HEADLINE_LINES = HEADLINE.map((line) =>
-  line.split(/\s+/).filter(Boolean),
-)
+const HEADLINE_LINES = [
+  'BUILD',
+  'THE FUTURE.',
+  'ONE MILESTONE',
+  'AT A TIME.',
+]
 
-const ITEMS = [
+const MILESTONES = [
   {
     code: 'REC · 001',
-    date: '2002.05',
+    year: '2002',
     title: 'Company founded',
     summary:
-      'SpaceX is incorporated in El Segundo, California — the system begins from a single intent.',
+      'SpaceX begins as a single intent: reduce the cost of reaching orbit.',
+    image: null,
+    imageAlt: '',
+    marker: 'square',
   },
   {
     code: 'REC · 002',
-    date: '2008.09',
-    title: 'Falcon 1 reaches orbit',
+    year: '2006',
+    title: 'Falcon 1 first attempt',
     summary:
-      'First privately funded liquid-fuel rocket to achieve Earth orbit. Survival, not victory.',
+      'The first launch attempt begins the rapid iteration era.',
+    image: null,
+    imageAlt: '',
+    marker: 'circle',
   },
   {
     code: 'REC · 003',
-    date: '2012.05',
-    title: 'Dragon docks the ISS',
+    year: '2008',
+    title: 'Falcon 1 reaches orbit',
     summary:
-      'A commercial spacecraft berths with the International Space Station for the first time.',
+      'The first privately developed liquid-fuel rocket reaches Earth orbit.',
+    image: null,
+    imageAlt: '',
+    marker: 'diamond',
   },
   {
     code: 'REC · 004',
-    date: '2020.05',
-    title: 'Crewed Dragon flight',
+    year: '2012',
+    title: 'Dragon docks with the ISS',
     summary:
-      'Demo-2 restores domestic crewed access to orbit after a nine-year gap.',
+      'Dragon becomes the first commercial spacecraft to berth with the station.',
+    image: null,
+    imageAlt: '',
+    marker: 'ring',
   },
   {
     code: 'REC · 005',
-    date: '2024.06',
+    year: '2018',
+    title: 'Falcon Heavy demonstration',
+    summary:
+      'A new heavy-lift vehicle proves reusable launch at dramatic scale.',
+    image: null,
+    imageAlt: '',
+    marker: 'square',
+  },
+  {
+    code: 'REC · 006',
+    year: '2020',
+    title: 'Crew Dragon human spaceflight',
+    summary:
+      'Demo-2 restores domestic crewed access to orbit.',
+    image: null,
+    imageAlt: '',
+    marker: 'circle',
+  },
+  {
+    code: 'REC · 007',
+    year: '2024',
     title: 'Starship reusable test',
     summary:
-      'Both Super Heavy and Starship achieve controlled splashdown in IFT-4.',
+      'Starship and Super Heavy demonstrate controlled splashdown and reuse logic.',
+    image: null,
+    imageAlt: '',
+    marker: 'diamond',
   },
 ]
+
+function PlaceholderFrame() {
+  return (
+    <div className="systems-timeline-frame-placeholder" aria-hidden="true">
+      <span className="systems-timeline-frame-cropmark systems-timeline-frame-cropmark-tl" />
+      <span className="systems-timeline-frame-cropmark systems-timeline-frame-cropmark-tr" />
+      <span className="systems-timeline-frame-cropmark systems-timeline-frame-cropmark-bl" />
+      <span className="systems-timeline-frame-cropmark systems-timeline-frame-cropmark-br" />
+      <span className="systems-timeline-frame-tag">▢ EMPTY</span>
+      <span className="systems-timeline-frame-label">OBJECT PLACEHOLDER</span>
+    </div>
+  )
+}
 
 export default function SystemsTimeline({ ready = true }) {
   const sectionRef = useRef(null)
   const headlineRef = useRef(null)
+  const axisLineRef = useRef(null)
+  const sceneRefs = useRef([])
 
   useEffect(() => {
     const section = sectionRef.current
+    if (!section) return undefined
+
     const headline = headlineRef.current
-    if (!section || !headline) return undefined
+    const axisLine = axisLineRef.current
+    const scenes = sceneRefs.current.filter(Boolean)
+    if (!headline || !axisLine || scenes.length !== MILESTONES.length) {
+      return undefined
+    }
 
-    const words = headline.querySelectorAll('.systems-timeline-word')
-    if (!words.length) return undefined
+    const letters = section.querySelectorAll('.systems-timeline-letter')
+    if (!letters.length) return undefined
 
-    // Deterministic initial state on every effect run — overrides any stale
-    // inline transform from hot reload / previous renders.
-    gsap.set(words, { yPercent: 105 })
+    // Deterministic initial state — overrides any inline transform left over
+    // from a previous render (hot reload, fast refresh).
+    const applyInitialState = () => {
+      gsap.set(letters, { '--letter-fill': 0 })
+      gsap.set(headline, { opacity: 1 })
+      gsap.set(axisLine, { scaleY: 0, transformOrigin: 'bottom center' })
+      gsap.set(scenes, { yPercent: 120, autoAlpha: 0 })
+    }
+
+    applyInitialState()
 
     if (!ready) return undefined // §5.1 gating: wait for LoadingScreen.
 
@@ -92,26 +191,144 @@ export default function SystemsTimeline({ ready = true }) {
       if (cancelled) return
 
       ctx = gsap.context(() => {
-        // Re-set inside the context so ctx.revert() restores it cleanly.
-        gsap.set(words, { yPercent: 105 })
+        // Re-apply inside the context so ctx.revert() can restore it.
+        applyInitialState()
 
-        ScrollTrigger.create({
-          trigger: section,
-          start: 'top 80%',
-          once: true, // play once and stay revealed (per Phase 1b spec)
-          onEnter: () => {
-            gsap.to(words, {
-              yPercent: 0,
-              duration: 0.85,
-              ease: 'power3.out',
-              stagger: { each: 0.085, from: 'start' },
-            })
+        const tl = gsap.timeline({
+          defaults: { ease: 'none' },
+          scrollTrigger: {
+            trigger: section,
+            start: 'top top',
+            end: 'bottom bottom',
+            // heavier smoothing makes milestone movement feel weighty + slow
+            scrub: 1.5,
+            invalidateOnRefresh: true,
           },
         })
+
+        // ─── Phase A: 0.05 → 0.32 — per-letter ink fill (no movement) ──
+        const phaseAStart = 0.05
+        const phaseAEnd = 0.32
+        const letterDur = 0.06
+        const staggerEach =
+          letters.length > 1
+            ? (phaseAEnd - phaseAStart - letterDur) / (letters.length - 1)
+            : 0
+
+        tl.to(
+          letters,
+          {
+            '--letter-fill': 1,
+            ease: 'power2.out',
+            duration: letterDur,
+            stagger: { each: staggerEach, from: 'start' },
+          },
+          phaseAStart,
+        )
+
+        // ─── Phase B: 0.44 → 0.52 — axis grows + headline dims ─────────
+        const phaseBStart = 0.44
+        const phaseBDur = 0.08
+
+        tl.to(
+          axisLine,
+          { scaleY: 1, duration: phaseBDur, ease: 'power2.inOut' },
+          phaseBStart,
+        )
+        tl.to(
+          headline,
+          { opacity: 0.55, duration: phaseBDur, ease: 'power2.out' },
+          phaseBStart,
+        )
+
+        // ─── Phase C: 0.52 → 0.98 — 7 milestone scenes, queued ────────
+        // Each scene is treated as an independent object that scrolls
+        // through the viewport. SCENE_SPACING > SCENE_DURATION leaves a
+        // small gap between scenes so the previous one has fully exited
+        // before the next one enters — no overlapping placeholders.
+        const phaseCStart = 0.52
+        const phaseCEnd = 0.98
+        const phaseCDur = phaseCEnd - phaseCStart
+
+        const SCENE_DURATION = 1.0
+        const SCENE_SPACING = 1.35
+
+        // Map scene-units onto the available master-timeline window so the
+        // last scene's tail lands exactly at phaseCEnd.
+        const totalUnits =
+          (MILESTONES.length - 1) * SCENE_SPACING + SCENE_DURATION
+        const unit = phaseCDur / totalUnits
+
+        scenes.forEach((scene, i) => {
+          const sceneStart = phaseCStart + i * SCENE_SPACING * unit
+          const sceneDur = SCENE_DURATION * unit
+
+          // y motion: 120 → 40 → 0 → -120 in three legs.
+          //   leg 1 (25%): off-screen → entering, decelerates as it lands
+          //   leg 2 (25%): drifts past 40 to the centre at constant rate
+          //   leg 3 (50%): accelerates upward and off-screen
+          // Marker + panel travel together because both are children.
+          tl.fromTo(
+            scene,
+            { yPercent: 120 },
+            {
+              yPercent: 40,
+              ease: 'power2.out',
+              duration: sceneDur * 0.25,
+            },
+            sceneStart,
+          )
+          tl.to(
+            scene,
+            {
+              yPercent: 0,
+              ease: 'none',
+              duration: sceneDur * 0.25,
+            },
+            sceneStart + sceneDur * 0.25,
+          )
+          tl.to(
+            scene,
+            {
+              yPercent: -120,
+              ease: 'power2.in',
+              duration: sceneDur * 0.50,
+            },
+            sceneStart + sceneDur * 0.50,
+          )
+
+          // opacity: only at the entry / exit edges. The middle 50% of the
+          // lifetime is fully opaque, so the visible change is real y
+          // movement, not a crossfade.
+          tl.fromTo(
+            scene,
+            { autoAlpha: 0 },
+            {
+              autoAlpha: 1,
+              ease: 'power2.out',
+              duration: sceneDur * 0.25,
+            },
+            sceneStart,
+          )
+          tl.to(
+            scene,
+            {
+              autoAlpha: 0,
+              ease: 'power2.in',
+              duration: sceneDur * 0.25,
+            },
+            sceneStart + sceneDur * 0.75,
+          )
+        })
       }, section)
+
+      // Re-measure every trigger now that fonts have loaded and any earlier
+      // pin spacer (OrbitGallery) is in the document. Without this our pin
+      // window can be measured against a stale layout on the first scroll.
+      ScrollTrigger.refresh()
     }
 
-    // Wait for webfonts so per-word widths are final before reveal kicks in.
+    // Wait for webfonts so per-letter widths are final before measuring.
     if (
       typeof document !== 'undefined' &&
       document.fonts &&
@@ -132,52 +349,96 @@ export default function SystemsTimeline({ ready = true }) {
   }, [ready])
 
   return (
-    <section
-      ref={sectionRef}
-      className="systems-timeline-section relative w-full h-screen overflow-hidden"
-    >
-      <header className="systems-timeline-header">
-        <div className="systems-timeline-header-group">
-          <span className="systems-timeline-pulse" aria-hidden="true" />
-          <span className="systems-timeline-header-title">Starship Manifest</span>
-          <span className="systems-timeline-header-divider">/</span>
-          <span className="systems-timeline-header-count">Systems Timeline</span>
-        </div>
-        <div className="systems-timeline-header-group">
-          <span className="systems-timeline-header-hint">2002 → 2024</span>
-        </div>
-      </header>
+    <section ref={sectionRef} className="systems-timeline-section">
+      <div className="systems-timeline-sticky">
+        <header className="systems-timeline-header">
+          <div className="systems-timeline-header-group">
+            <span className="systems-timeline-pulse" aria-hidden="true" />
+            <span className="systems-timeline-header-title">Starship Manifest</span>
+            <span className="systems-timeline-header-divider">/</span>
+            <span className="systems-timeline-header-count">Systems Timeline</span>
+          </div>
+          <div className="systems-timeline-header-group">
+            <span className="systems-timeline-header-hint">2002 → 2024</span>
+          </div>
+        </header>
 
-      <div className="systems-timeline-stage">
+        {/* ─── Headline (left) ──────────────────────────────────────── */}
         <div className="systems-timeline-headline" ref={headlineRef}>
-          {HEADLINE_LINES.map((words, i) => (
-            <span key={i} className="systems-timeline-line">
-              {words.map((word, j) => (
-                <Fragment key={j}>
-                  <span className="systems-timeline-word-clip">
-                    <span className="systems-timeline-word">{word}</span>
+          <span className="systems-timeline-sr-only">
+            {HEADLINE_LINES.join(' ')}
+          </span>
+          {HEADLINE_LINES.map((line, lineIdx) => (
+            <span key={lineIdx} className="systems-timeline-line">
+              {Array.from(line).map((ch, charIdx) =>
+                ch === ' ' ? (
+                  <span
+                    key={charIdx}
+                    className="systems-timeline-space"
+                    aria-hidden="true"
+                  >
+                    &nbsp;
                   </span>
-                  {j < words.length - 1 ? ' ' : null}
-                </Fragment>
-              ))}
+                ) : (
+                  // Each letter is a single fixed-position inline-block.
+                  // It never translates; CSS gradient + background-clip:text
+                  // paint the glyph from below as --letter-fill rises 0 → 1.
+                  <span
+                    key={charIdx}
+                    className="systems-timeline-letter"
+                    aria-hidden="true"
+                  >
+                    {ch}
+                  </span>
+                ),
+              )}
             </span>
           ))}
         </div>
 
-        <div className="systems-timeline-track">
-          <ol className="systems-timeline-items">
-            {ITEMS.map((item) => (
-              <li key={item.code} className="systems-timeline-item">
-                <span className="systems-timeline-item-dot" aria-hidden="true" />
-                <div className="systems-timeline-item-meta">
-                  <span className="systems-timeline-item-code">{item.code}</span>
-                  <span className="systems-timeline-item-date">{item.date}</span>
+        {/* ─── Vertical axis (centre-right) — no static dots ────────── */}
+        <div className="systems-timeline-axis-wrap" aria-hidden="true">
+          <span className="systems-timeline-axis-line" ref={axisLineRef} />
+        </div>
+
+        {/* ─── Milestone scenes (marker + panel ride up as one unit) ── */}
+        <div className="systems-timeline-scenes-layer">
+          {MILESTONES.map((m, i) => (
+            <div
+              key={m.code}
+              className="systems-timeline-scene"
+              ref={(el) => {
+                sceneRefs.current[i] = el
+              }}
+            >
+              <span
+                className={`systems-timeline-scene-marker systems-timeline-scene-marker-${m.marker}`}
+                aria-hidden="true"
+              />
+              <article className="systems-timeline-scene-panel">
+                <div className="systems-timeline-panel-meta">
+                  <span className="systems-timeline-panel-code">{m.code}</span>
+                  <span className="systems-timeline-panel-year">{m.year}</span>
                 </div>
-                <h4 className="systems-timeline-item-title">{item.title}</h4>
-                <p className="systems-timeline-item-summary">{item.summary}</p>
-              </li>
-            ))}
-          </ol>
+
+                <div className="systems-timeline-panel-frame">
+                  {m.image ? (
+                    <img
+                      className="systems-timeline-panel-img"
+                      src={m.image}
+                      alt={m.imageAlt}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <PlaceholderFrame />
+                  )}
+                </div>
+
+                <h3 className="systems-timeline-panel-title">{m.title}</h3>
+                <p className="systems-timeline-panel-summary">{m.summary}</p>
+              </article>
+            </div>
+          ))}
         </div>
       </div>
     </section>

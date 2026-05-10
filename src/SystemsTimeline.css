@@ -1,25 +1,43 @@
-/* SystemsTimeline — Page 3 (replaces StarlinkReveal).
+/* SystemsTimeline — Page 3.
  *
- * Phase 1a: STATIC SKELETON only. No animation.
- * Color tokens follow DESIGN_SYSTEM.md §3.1:
- *   --systems-bg     #f5f5f7   off-white archive background (matches Page 2)
- *   --systems-ink    #0a0a0a   primary type
- *   --systems-blue   #1f5a99   pulse + dividers (orbit-blue token)
- *   --systems-axis   rgba(0,0,0,0.85)  vertical timeline line
+ * 540vh sticky-pinned section. Inside the sticky viewport:
+ *   ─ left:           big black headline (per-letter ink-fill from below;
+ *                     letters are FIXED in layout — only the gradient stop
+ *                     inside the glyph rises)
+ *   ─ centre-right:   vertical axis line that grows bottom→top in Phase B
+ *                     (no static milestone dots — markers belong to scenes)
+ *   ─ right:          7 milestone scenes; each scene = one marker on the
+ *                     axis + one panel on the right, animated together.
+ *
+ * CSS variables are scoped to the section so they don't leak globally.
+ * Initial transforms / visibility for animated nodes are mirrored in CSS,
+ * so first paint matches the GSAP starting state — no flash of revealed
+ * content.
  */
 
-:root {
+.systems-timeline-section {
   --systems-bg: #f5f5f7;
   --systems-ink: #0a0a0a;
   --systems-axis: rgba(0, 0, 0, 0.85);
   --systems-blue: #1f5a99;
-}
 
-.systems-timeline-section {
+  position: relative;
+  width: 100%;
+  /* Long enough that milestone scenes change at a deliberate pace —
+     ~7.5 viewports of internal narrative. */
+  min-height: 900vh;
   background: var(--systems-bg);
 }
 
-/* ─── Top header ───────────────────────────────────────────────── */
+.systems-timeline-sticky {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── Top header (always-on chrome) ────────────────────────────────── */
 .systems-timeline-header {
   position: absolute;
   top: 0;
@@ -68,139 +86,307 @@
   50%      { opacity: 1; }
 }
 
-/* ─── Stage layout (two columns) ───────────────────────────────── */
-.systems-timeline-stage {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  align-items: center;
-  padding-top: clamp(4.5rem, 9vh, 6rem);
-  padding-bottom: clamp(2rem, 5vh, 4rem);
-  padding-left: clamp(2rem, 5vw, 5rem);
-  padding-right: clamp(2rem, 5vw, 5rem);
-  gap: clamp(2rem, 4vw, 4rem);
-}
-
-/* ─── Left column: huge headline ───────────────────────────────── */
+/* ─── Left column: headline ────────────────────────────────────────── */
 .systems-timeline-headline {
+  position: absolute;
+  top: 50%;
+  left: clamp(2rem, 5vw, 5rem);
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 0;
+  z-index: 10;
+  max-width: 60vw;
 }
+
 .systems-timeline-line {
   display: block;
   font-family: "Space Grotesk", system-ui, sans-serif;
-  font-weight: 900;
+  /* heaviest available weight; oblique slant adds editorial-manifesto force
+     without committing to a separate italic family file */
+  font-weight: 950;
+  font-style: oblique 8deg;
   letter-spacing: -0.06em;
   text-transform: uppercase;
-  font-size: clamp(3.5rem, 9vw, 8.5rem);
+  /* slightly smaller than before so "ONE MILESTONE" finishes before the
+     axis at 60vw (axis was crossing the headline previously) */
+  font-size: clamp(2.6rem, 6.6vw, 6.4rem);
   line-height: 0.92;
   color: var(--systems-ink);
+  white-space: nowrap;
 }
 
-/* word-by-word reveal: clip wrapper + sliding word.
- * Initial state is set in CSS too, so words stay hidden between first paint
- * and the GSAP set call (no flash). GSAP then drives the slide-up reveal. */
-.systems-timeline-word-clip {
+/* Per-letter ink fill (fixed layout, no translation).
+ *
+ * Each letter is a single inline-block whose own text colour is transparent
+ * (so the glyph holds inline space without painting). A vertical
+ * linear-gradient is the element's background; background-clip: text masks
+ * the gradient to the glyph shape. The gradient has two stops at the same
+ * percent — below the stop the colour is solid ink, above it is fully
+ * transparent. As the CSS variable --letter-fill rises 0 → 1, the stop
+ * climbs from the bottom of the glyph to the top: ink rising through the
+ * letter, with the letter itself never moving.
+ */
+.systems-timeline-letter {
   display: inline-block;
-  overflow: hidden;
   line-height: inherit;
-  vertical-align: bottom;
+  color: transparent;
+  background-image: linear-gradient(
+    to top,
+    var(--systems-ink) calc(var(--letter-fill, 0) * 100%),
+    transparent calc(var(--letter-fill, 0) * 100%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  will-change: background-image;
 }
-.systems-timeline-word {
+.systems-timeline-space {
   display: inline-block;
-  line-height: inherit;
-  transform: translateY(105%);
+  width: 0.3em;
+}
+
+.systems-timeline-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Centre-right column: vertical axis (no static dots) ──────────── */
+.systems-timeline-axis-wrap {
+  /* span the full pinned viewport so the axis visually connects the top
+     and bottom edges of Page 3 */
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+}
+.systems-timeline-axis-line {
+  position: absolute;
+  /* moved right so the axis no longer cuts through the headline */
+  left: 60%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--systems-axis);
+  transform: scaleY(0);
+  transform-origin: bottom center;
   will-change: transform;
 }
 
-/* ─── Right column: timeline track ─────────────────────────────── */
-.systems-timeline-track {
-  position: relative;
-  display: flex;
-  align-self: center;
-  width: 100%;
-}
-.systems-timeline-items {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 clamp(1.75rem, 3vw, 2.75rem);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(1.1rem, 2.5vh, 2rem);
-  width: 100%;
-}
-.systems-timeline-items::before {
-  content: "";
+/* ─── Milestone scenes ─────────────────────────────────────────────── *
+ * Each scene container fills the sticky viewport and holds one marker on
+ * the central axis and one panel on the right. The container's yPercent /
+ * autoAlpha is animated; both children translate together as one group.
+ */
+.systems-timeline-scenes-layer {
   position: absolute;
-  left: 0;
-  top: 0.4em;
-  bottom: 0.4em;
-  width: 1px;
-  background: var(--systems-axis);
+  inset: 0;
+  pointer-events: none;
+  z-index: 14;
+}
+.systems-timeline-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
 }
 
-.systems-timeline-item {
-  position: relative;
-  max-width: 32em;
-}
-.systems-timeline-item-dot {
+/* Scene marker: shape variants ride on the axis at vertical centre */
+.systems-timeline-scene-marker {
   position: absolute;
-  left: calc(-1 * clamp(1.75rem, 3vw, 2.75rem) - 4.5px);
-  top: 0.65em;
-  width: 9px;
-  height: 9px;
+  /* sits on the axis line; matches .systems-timeline-axis-line left */
+  left: 60%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
   background: var(--systems-ink);
-  border-radius: 999px;
+  /* the scene container's transform already moves us; this transform
+     only handles per-shape centring + rotation (no animated values). */
+  transform: translate(-50%, -50%);
+  border-radius: 0;
 }
-.systems-timeline-item-meta {
+.systems-timeline-scene-marker-square {
+  /* solid square — engineering / hard-edged default */
+}
+.systems-timeline-scene-marker-circle {
+  border-radius: 50%;
+}
+.systems-timeline-scene-marker-diamond {
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.systems-timeline-scene-marker-ring {
+  background: transparent;
+  border: 1.5px solid var(--systems-ink);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+}
+
+/* Scene panel: right column, vertically centred. Rides the scene's y. */
+.systems-timeline-scene-panel {
+  position: absolute;
+  top: 14vh;
+  bottom: 14vh;
+  /* shifted right to clear the axis at 60vw — panel sits to the right
+     of the line with a small gap */
+  left: 64%;
+  right: clamp(2rem, 5vw, 5rem);
   display: flex;
-  align-items: center;
-  gap: 0.85em;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.55rem, 1vh, 0.95rem);
+}
+.systems-timeline-panel-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: clamp(0.6rem, 0.78vw, 0.72rem);
-  letter-spacing: 0.22em;
+  font-size: clamp(0.62rem, 0.78vw, 0.74rem);
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
-.systems-timeline-item-code {
+.systems-timeline-panel-code {
   color: rgba(0, 0, 0, 0.85);
   font-weight: 600;
-  white-space: nowrap;
 }
-.systems-timeline-item-date {
+.systems-timeline-panel-year {
   color: rgba(0, 0, 0, 0.5);
-  white-space: nowrap;
 }
-.systems-timeline-item-title {
-  font-size: clamp(1rem, 1.3vw, 1.25rem);
+.systems-timeline-panel-frame {
+  position: relative;
+  width: clamp(220px, 22vw, 360px);
+  max-width: 100%;
+  aspect-ratio: 4 / 5;
+  align-self: flex-start;
+}
+.systems-timeline-panel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.systems-timeline-panel-title {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(1.05rem, 1.4vw, 1.35rem);
   font-weight: 600;
   letter-spacing: -0.005em;
   color: var(--systems-ink);
-  margin: 0.4rem 0 0.25rem;
+  margin: 0.25rem 0 0;
+  max-width: 28ch;
 }
-.systems-timeline-item-summary {
-  font-size: clamp(0.72rem, 0.88vw, 0.82rem);
+.systems-timeline-panel-summary {
+  font-size: clamp(0.74rem, 0.9vw, 0.84rem);
   line-height: 1.5;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(0, 0, 0, 0.6);
   margin: 0;
   max-width: 32ch;
 }
 
-/* ─── Mobile fallback (basic; polish in a later phase) ─────────── */
-@media (max-width: 768px) {
-  .systems-timeline-stage {
-    grid-template-columns: 1fr;
-    align-items: start;
-    padding-top: clamp(4rem, 12vh, 5rem);
-    gap: clamp(1.75rem, 5vw, 2.75rem);
-    overflow-y: auto;
+/* ─── Placeholder item frame (replace with <img> later) ──────────── */
+.systems-timeline-frame-placeholder {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.015);
+  /* exhibition-frame double-line: outer hairline + inner inset highlight */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 5px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.systems-timeline-frame-cropmark {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 0 solid rgba(0, 0, 0, 0.55);
+}
+.systems-timeline-frame-cropmark-tl {
+  top: 7px;
+  left: 7px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+.systems-timeline-frame-cropmark-tr {
+  top: 7px;
+  right: 7px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+.systems-timeline-frame-cropmark-bl {
+  bottom: 7px;
+  left: 7px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+.systems-timeline-frame-cropmark-br {
+  bottom: 7px;
+  right: 7px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+.systems-timeline-frame-tag {
+  position: absolute;
+  top: 0.85rem;
+  left: 1rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  color: rgba(0, 0, 0, 0.45);
+  text-transform: uppercase;
+}
+.systems-timeline-frame-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.32em;
+  color: rgba(0, 0, 0, 0.32);
+  text-transform: uppercase;
+}
+
+/* ─── Mobile / narrow viewport fallback (basic; polish in a later phase) */
+@media (max-width: 900px) {
+  .systems-timeline-section {
+    min-height: 380vh;
+  }
+  .systems-timeline-headline {
+    top: 18vh;
+    transform: none;
+    left: clamp(1.25rem, 4vw, 2rem);
+    right: clamp(1.25rem, 4vw, 2rem);
+    max-width: none;
   }
   .systems-timeline-line {
-    font-size: clamp(2.4rem, 13vw, 4.6rem);
+    font-size: clamp(2rem, 11vw, 4.2rem);
+    white-space: normal;
   }
-  .systems-timeline-track {
-    align-self: start;
+  .systems-timeline-axis-wrap {
+    display: none;
+  }
+  .systems-timeline-scenes-layer {
+    /* scenes stack as a bottom strip on mobile */
+    top: auto;
+    bottom: 0;
+    height: 56vh;
+  }
+  .systems-timeline-scene-marker {
+    display: none;
+  }
+  .systems-timeline-scene-panel {
+    top: 0;
+    bottom: 0;
+    left: clamp(1.25rem, 4vw, 2rem);
+    right: clamp(1.25rem, 4vw, 2rem);
+  }
+  .systems-timeline-panel-frame {
+    width: clamp(180px, 50vw, 260px);
   }
 }
