@@ -58,6 +58,18 @@ import './SystemsTimeline.css'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// ─── Tunable scroll-motion constants ─────────────────────────────────
+// SCENE_UNIT controls both spacing and scroll distance — they must be
+// equal to guarantee no two cards are visible simultaneously.
+// Note: scroll-per-scene = phaseCDur * 900vh / 7, independent of SCENE_UNIT.
+// To slow cards further, expand the Phase C window (e.g. start earlier).
+const SCENE_UNIT = 1.0          // scroll-units per scene (spacing = distance)
+const MOVEMENT_MULTIPLIER = 0.6 // scale yPercent: lower = slower cards
+const START_OFFSET = 120        // yPercent below viewport where scene enters
+const END_OFFSET = -120         // yPercent above viewport where scene exits
+const PEAK_OFFSET = 0           // yPercent at centre of viewport (fully visible)
+const ENTRY_OFFSET = 40         // yPercent where scene becomes fully visible
+
 const HEADLINE_LINES = [
   'BUILD',
   'THE FUTURE.',
@@ -177,7 +189,7 @@ export default function SystemsTimeline({ ready = true }) {
       gsap.set(letters, { '--letter-fill': 0 })
       gsap.set(headline, { opacity: 1 })
       gsap.set(axisLine, { scaleY: 0, transformOrigin: 'bottom center' })
-      gsap.set(scenes, { yPercent: 120, autoAlpha: 0 })
+      gsap.set(scenes, { yPercent: START_OFFSET * MOVEMENT_MULTIPLIER, autoAlpha: 0 })
     }
 
     applyInitialState()
@@ -200,16 +212,15 @@ export default function SystemsTimeline({ ready = true }) {
             trigger: section,
             start: 'top top',
             end: 'bottom bottom',
-            // heavier smoothing makes milestone movement feel weighty + slow
-            scrub: 1.5,
+            scrub: true,
             invalidateOnRefresh: true,
           },
         })
 
-        // ─── Phase A: 0.05 → 0.32 — per-letter ink fill (no movement) ──
-        const phaseAStart = 0.05
-        const phaseAEnd = 0.32
-        const letterDur = 0.06
+        // ─── Phase A: 0.01 → 0.19 — per-letter ink fill (no movement) ──
+        const phaseAStart = 0.01
+        const phaseAEnd = 0.19
+        const letterDur = 0.04
         const staggerEach =
           letters.length > 1
             ? (phaseAEnd - phaseAStart - letterDur) / (letters.length - 1)
@@ -226,9 +237,9 @@ export default function SystemsTimeline({ ready = true }) {
           phaseAStart,
         )
 
-        // ─── Phase B: 0.44 → 0.52 — axis grows + headline dims ─────────
-        const phaseBStart = 0.44
-        const phaseBDur = 0.08
+        // ─── Phase B: 0.19 → 0.24 — axis grows + headline dims ─────────
+        const phaseBStart = 0.19
+        const phaseBDur = 0.05
 
         tl.to(
           axisLine,
@@ -241,39 +252,31 @@ export default function SystemsTimeline({ ready = true }) {
           phaseBStart,
         )
 
-        // ─── Phase C: 0.52 → 0.98 — 7 milestone scenes, queued ────────
-        // Each scene is treated as an independent object that scrolls
-        // through the viewport. SCENE_SPACING > SCENE_DURATION leaves a
-        // small gap between scenes so the previous one has fully exited
-        // before the next one enters — no overlapping placeholders.
-        const phaseCStart = 0.52
+        // ─── Phase C: 0.24 → 0.98 — 7 milestone scenes, queued ────────
+        // SCENE_UNIT controls both spacing and distance — they are equal
+        // so scenes are back-to-back with zero visual overlap.
+        const phaseCStart = 0.24
         const phaseCEnd = 0.98
         const phaseCDur = phaseCEnd - phaseCStart
 
-        const SCENE_DURATION = 1.0
-        const SCENE_SPACING = 1.35
-
         // Map scene-units onto the available master-timeline window so the
         // last scene's tail lands exactly at phaseCEnd.
-        const totalUnits =
-          (MILESTONES.length - 1) * SCENE_SPACING + SCENE_DURATION
+        const totalUnits = MILESTONES.length * SCENE_UNIT
         const unit = phaseCDur / totalUnits
 
         scenes.forEach((scene, i) => {
-          const sceneStart = phaseCStart + i * SCENE_SPACING * unit
-          const sceneDur = SCENE_DURATION * unit
+          const sceneStart = phaseCStart + i * SCENE_UNIT * unit
+          const sceneDur = SCENE_UNIT * unit
 
-          // y motion: 120 → 40 → 0 → -120 in three legs.
-          //   leg 1 (25%): off-screen → entering, decelerates as it lands
-          //   leg 2 (25%): drifts past 40 to the centre at constant rate
-          //   leg 3 (50%): accelerates upward and off-screen
-          // Marker + panel travel together because both are children.
+          // y motion: START_OFFSET → ENTRY_OFFSET → PEAK_OFFSET → END_OFFSET
+          // in three linear legs, each scaled by MOVEMENT_MULTIPLIER so
+          // lower values = slower card movement for the same scroll input.
           tl.fromTo(
             scene,
-            { yPercent: 120 },
+            { yPercent: START_OFFSET * MOVEMENT_MULTIPLIER },
             {
-              yPercent: 40,
-              ease: 'power2.out',
+              yPercent: ENTRY_OFFSET * MOVEMENT_MULTIPLIER,
+              ease: 'none',
               duration: sceneDur * 0.25,
             },
             sceneStart,
@@ -281,7 +284,7 @@ export default function SystemsTimeline({ ready = true }) {
           tl.to(
             scene,
             {
-              yPercent: 0,
+              yPercent: PEAK_OFFSET * MOVEMENT_MULTIPLIER,
               ease: 'none',
               duration: sceneDur * 0.25,
             },
@@ -290,8 +293,8 @@ export default function SystemsTimeline({ ready = true }) {
           tl.to(
             scene,
             {
-              yPercent: -120,
-              ease: 'power2.in',
+              yPercent: END_OFFSET * MOVEMENT_MULTIPLIER,
+              ease: 'none',
               duration: sceneDur * 0.50,
             },
             sceneStart + sceneDur * 0.50,

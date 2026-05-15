@@ -96,21 +96,19 @@
   flex-direction: column;
   gap: 0;
   z-index: 10;
-  max-width: 60vw;
+  /* right edge stays left of the axis at 60% */
+  max-width: calc(60% - clamp(2rem, 5vw, 5rem) - 0.5rem);
 }
 
 .systems-timeline-line {
   display: block;
   font-family: "Space Grotesk", system-ui, sans-serif;
-  /* heaviest available weight; oblique slant adds editorial-manifesto force
-     without committing to a separate italic family file */
-  font-weight: 950;
-  font-style: oblique 8deg;
+  font-weight: 1000;
+  font-style: normal;
   letter-spacing: -0.06em;
   text-transform: uppercase;
-  /* slightly smaller than before so "ONE MILESTONE" finishes before the
-     axis at 60vw (axis was crossing the headline previously) */
-  font-size: clamp(2.6rem, 6.6vw, 6.4rem);
+  /* scaled so "ONE MILESTONE" (longest line) stays within max-width */
+  font-size: clamp(2.8rem, 7.5vw, 7.5rem);
   line-height: 0.92;
   color: var(--systems-ink);
   white-space: nowrap;
