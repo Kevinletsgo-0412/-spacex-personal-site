@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import LoadingScreen from './LoadingScreen'
 import HeroVideo from './HeroVideo'
-import OrbitGallery from './OrbitGallery'
+import SpaceXScrollRevealGallery from './SpaceXScrollRevealGallery'
 import SystemsTimeline from './SystemsTimeline'
 import ConstellationReveal from './ConstellationReveal'
 
@@ -15,13 +15,13 @@ function App() {
         <HeroVideo />
       </section>
 
-      {/* Screen 2 — Orbit Gallery (mounts early for preload, ScrollTrigger pins it) */}
-      <OrbitGallery ready={!isLoading} />
+      {/* Screen 2 — Vertical scroll-reveal gallery (6 SpaceX milestones) */}
+      <SpaceXScrollRevealGallery ready={!isLoading} />
 
       {/* Screen 3 — Systems Timeline (replaces StarlinkReveal; ready prop preserved per DESIGN_SYSTEM.md §5.1) */}
       <SystemsTimeline ready={!isLoading} />
 
-      {/* Screen 4 (word reveal) + transition → Screen 5 (stars + image) */}
+      {/* Screen 4 (word reveal) + transition → Screen 5 (satellite + globe scene) */}
       <ConstellationReveal />
 
       {/* Loading Overlay */}

@@ -1,0 +1,393 @@
+/* SpaceX Scroll Reveal Gallery — Page 2.
+ *
+ * Stacked, scroll-driven cinematic gallery. One sticky stage hosts six
+ * absolutely-stacked slides; each slide moves through four phases under
+ * scroll scrub:
+ *
+ *   A — enter: rise from below + scale up + clip-path opens
+ *   B — hold: locked at the visual centre, captions reveal word-by-word
+ *   C — next emerges: the next slide's entry begins while this one still
+ *       holds, so a small letterbox appears at the bottom edge
+ *   D — exit (overlaps C): this slide simultaneously translates up,
+ *       scales down and fades while the next slide rises into the centre
+ *
+ * The sticky stage uses real flex centring so every image lands with its
+ * centre on the viewport centre, not parked low.
+ *
+ * Palette stays inside the existing archive tokens (DESIGN_SYSTEM.md §3.1).
+ */
+
+.srg-section {
+  position: relative;
+  width: 100%;
+  background: #F7F5EF;
+  color: #0a0a0a;
+}
+
+/* ─── Spacer drives the ScrollTrigger range; sticky stage rides on top ── */
+.srg-scroll-spacer {
+  /* Updated by JS once slide count is known. */
+  height: 1000vh;
+  position: relative;
+}
+
+.srg-stage {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #F7F5EF;
+  /* True centring of the slide stack. Slides themselves use inset:0 so
+   * they fill the stage; the image inside each slide is then flex-centred
+   * inside the slide for pixel-accurate centre alignment. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Header (sticky-style, floats above slides) ────────────────────── */
+.srg-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(1.1rem, 2vw, 1.75rem) clamp(1.5rem, 3vw, 2.5rem);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.62rem, 0.78vw, 0.74rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
+  mix-blend-mode: multiply;
+}
+.srg-header-title  { color: rgba(0, 0, 0, 0.85); font-weight: 600; }
+.srg-header-divider{ margin: 0 0.7em; color: #1f5a99; }
+.srg-header-count  { color: rgba(0, 0, 0, 0.55); }
+.srg-header-index  { font-variant-numeric: tabular-nums; color: rgba(0, 0, 0, 0.45); }
+.srg-header-pulse {
+  display: inline-block;
+  width: 6px; height: 6px; margin-right: 0.6em;
+  background: #1f5a99;
+  border-radius: 999px;
+  vertical-align: middle;
+  animation: srg-pulse 2.6s ease-in-out infinite;
+}
+@keyframes srg-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* ─── Slide stack ──────────────────────────────────────────────────── */
+/*
+ * Each slide is a full-stage layer. Inside it, the image-wrap is flex-
+ * centred so its visual centre lines up with the viewport centre at
+ * scale=1, y=0 — that's the locked "hero" pose at the end of phase A.
+ *
+ * GSAP drives transforms on .srg-image-wrap (not on .srg-slide) so the
+ * caption rides along with the image during exit (translate / scale /
+ * fade), exactly as the spec requires.
+ */
+.srg-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  /* z-index assigned inline per slide so the newer slide always paints
+   * on top of the older one during the crossover. */
+}
+
+.srg-image-wrap {
+  position: relative;
+  width: 92vw;
+  max-width: 1480px;
+  height: 82vh;
+  transform-origin: 50% 50%;
+  will-change: transform, clip-path, opacity;
+}
+
+.srg-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ebeced;
+  box-shadow: 0 30px 70px -25px rgba(20, 20, 30, 0.35);
+}
+.srg-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Bottom gradient so captions remain readable over any frame. */
+.srg-image-scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 55%;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0.2) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+}
+.srg-slide[data-tone="light"] .srg-image-scrim {
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(255, 255, 255, 0.35) 55%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+/* Placeholder when image src is missing */
+.srg-image-placeholder {
+  position: absolute;
+  inset: 0;
+  background-color: #ebeced;
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 26px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* ─── Caption (lives inside the image's bottom corner) ──────────────── */
+.srg-caption {
+  position: absolute;
+  bottom: clamp(1.4rem, 3vh, 2.4rem);
+  z-index: 2;
+  max-width: min(46ch, 46%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  pointer-events: none;
+  /* Default (dark tone — bright text on dark scrim) */
+  --srg-cap-ink:    #ffffff;
+  --srg-cap-soft:   rgba(255, 255, 255, 0.82);
+  --srg-cap-muted:  rgba(255, 255, 255, 0.62);
+  --srg-cap-accent: #9cc3ee;
+}
+.srg-caption[data-align="left"]  { left:  clamp(1.4rem, 4vw, 3rem); text-align: left; }
+.srg-caption[data-align="right"] { right: clamp(1.4rem, 4vw, 3rem); text-align: right; align-items: flex-end; }
+
+/* Light tone — dark text on a bright frame */
+.srg-slide[data-tone="light"] .srg-caption {
+  --srg-cap-ink:    #0a0a0a;
+  --srg-cap-soft:   rgba(0, 0, 0, 0.78);
+  --srg-cap-muted:  rgba(0, 0, 0, 0.55);
+  --srg-cap-accent: #1f5a99;
+}
+
+.srg-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.6rem, 0.74vw, 0.72rem);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--srg-cap-muted);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.2em;
+}
+.srg-eyebrow-program { color: var(--srg-cap-soft); font-weight: 600; }
+.srg-eyebrow-divider { color: var(--srg-cap-accent); padding: 0 0.35em; }
+.srg-eyebrow-code    { color: var(--srg-cap-muted); }
+
+.srg-title {
+  font-size: clamp(1.7rem, 3.4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  color: var(--srg-cap-ink);
+  margin: 0;
+}
+
+/* Date sits alone on its own line — no status badge any more. */
+.srg-date {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(0.6rem, 0.74vw, 0.7rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--srg-cap-muted);
+}
+
+.srg-desc {
+  font-size: clamp(0.82rem, 1.04vw, 1rem);
+  line-height: 1.55;
+  color: var(--srg-cap-soft);
+  margin: 0;
+}
+
+/* ─── Intro hero text (before slides) ─────────────────────────────────
+ *
+ * Three lines of large centred text, each letter rendered via ink-fill
+ * (same technique as SystemsTimeline/Page 3). The container is absolutely
+ * positioned inside the sticky stage at z-index 90 so it paints above the
+ * header and slides. GSAP drives --letter-fill per-character, line-by-line,
+ * then translates + fades the whole container up and away before slide 0
+ * enters.
+ */
+.srg-intro-container {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.4rem, 1.2vh, 1rem);
+  padding: clamp(2rem, 5vw, 4rem);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.srg-intro-line {
+  display: block;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  font-weight: 1000;
+  letter-spacing: -0.04em;
+  text-align: center;
+  color: #0a0a0a;
+  line-height: 1.05;
+}
+
+.srg-intro-line-1 {
+  font-size: clamp(3.2rem, 8.5vw, 8.5rem);
+  text-transform: uppercase;
+}
+
+.srg-intro-line-2 {
+  font-size: clamp(1.3rem, 3vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #1a1a1a;
+}
+
+.srg-intro-line-3 {
+  font-size: clamp(0.95rem, 1.8vw, 1.7rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+/* Per-letter ink fill — identical technique to SystemsTimeline.
+   Letter itself never moves; the gradient stop climbs 0→100% as
+   --letter-fill goes 0→1, painting the glyph from the bottom up. */
+.srg-intro-letter {
+  display: inline-block;
+  line-height: inherit;
+  color: transparent;
+  background-image: linear-gradient(
+    to top,
+    #0a0a0a calc(var(--letter-fill, 0) * 100%),
+    transparent calc(var(--letter-fill, 0) * 100%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  will-change: background-image;
+}
+
+.srg-intro-space {
+  display: inline-block;
+  width: 0.3em;
+}
+
+/* ─── Per-word reveal target ─────────────────────────────────────────
+ *
+ * Each word is a single inline-block. CSS parks it at translateY(0.5em)
+ * with opacity 0; GSAP scrubs it to translateY(0) + opacity 1 under
+ * scroll. No nested mask — the previous mask structure rendered words
+ * with zero height in the unrevealed state, which made them appear to
+ * "never load" if anything interrupted the GSAP tween. The simpler
+ * version is robust: even if the tween glitches, opacity 0 fails to a
+ * visually empty word rather than a phantom layout box.
+ */
+.srg-word {
+  display: inline-block;
+  transform: translateY(0.5em);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.srg-word-space {
+  display: inline-block;
+  width: 0.28em;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .srg-image-wrap {
+    width: 94vw;
+    height: 78vh;
+  }
+  .srg-caption {
+    max-width: min(40ch, 60%);
+  }
+}
+
+@media (max-width: 640px) {
+  .srg-intro-container {
+    gap: 0.3rem;
+    padding: 1.5rem;
+  }
+  .srg-intro-line-1 { font-size: clamp(2.2rem, 11vw, 3.8rem); }
+  .srg-intro-line-2 { font-size: clamp(0.95rem, 4.5vw, 1.6rem); }
+  .srg-intro-line-3 { font-size: clamp(0.72rem, 3.2vw, 1rem); }
+
+  .srg-image-wrap {
+    width: 94vw;
+    height: 66vh;
+    border-radius: 4px;
+  }
+  .srg-caption {
+    max-width: 86%;
+    bottom: 1.1rem;
+    gap: 0.38rem;
+  }
+  .srg-caption[data-align="left"]  { left: 1rem; }
+  .srg-caption[data-align="right"] { right: 1rem; }
+  .srg-title { font-size: 1.45rem; }
+  .srg-desc { font-size: 0.82rem; line-height: 1.5; }
+  .srg-header {
+    padding: 0.9rem 1.1rem;
+    font-size: 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .srg-intro-letter {
+    color: #0a0a0a !important;
+    background-image: none !important;
+  }
+  .srg-intro-container {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .srg-image-wrap {
+    transform: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+  }
+  .srg-word {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
