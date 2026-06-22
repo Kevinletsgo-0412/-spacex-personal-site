@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SpaceX · Starship — Test Like You Fly</title>
+<style>
+  :root{
+    --bg:#08090b;
+    --ink:#f4f4f1;
+    --mute:#7a7e85;
+    --line:#1c1f24;
+    --accent:#ff5b1f;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:"Inter","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+
+  /* ── header ── */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 32px;
+    background:linear-gradient(180deg,rgba(8,9,11,.92),rgba(8,9,11,0));
+    backdrop-filter:blur(8px);
+    font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  }
+  header .brand{display:flex;gap:14px;align-items:center}
+  header .brand span{width:8px;height:8px;background:var(--accent);border-radius:50%}
+  header nav{color:var(--mute)}
+  header nav b{color:var(--ink);font-weight:500}
+
+  /* ── pinned timeline section ── */
+  .timeline-pin{
+    position:relative;
+    width:100%;
+    min-height:600vh;
+    background:var(--bg);
+  }
+  .timeline-stage{
+    position:sticky;
+    top:0;
+    width:100%;
+    height:100vh;
+    overflow:hidden;
+  }
+
+  /* ── headline (left side) ── */
+  .tl-headline{
+    position:absolute;
+    top:50%;
+    left:clamp(1.5rem,4vw,4rem);
+    transform:translateY(-50%);
+    z-index:10;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    max-width:42vw;
+    -webkit-mask-image:linear-gradient(to right,black var(--sweep,100%),transparent var(--sweep,100%));
+    mask-image:linear-gradient(to right,black var(--sweep,100%),transparent var(--sweep,100%));
+  }
+  .tl-headline .tl-line{
+    display:block;
+    font-family:"Inter",sans-serif;
+    font-weight:300;
+    font-size:clamp(42px,8vw,120px);
+    line-height:.95;
+    letter-spacing:-.03em;
+    white-space:nowrap;
+  }
+  .tl-headline .tl-line em{font-style:normal;color:var(--mute);font-weight:200}
+
+  /* per-letter ink-fill for headline */
+  .tl-letter{
+    display:inline-block;
+    line-height:inherit;
+    color:transparent;
+    background-image:linear-gradient(to top,var(--ink) calc(var(--letter-fill,0)*100%),transparent calc(var(--letter-fill,0)*100%));
+    -webkit-background-clip:text;
+    background-clip:text;
+  }
+  .tl-headline em .tl-letter{
+    background-image:linear-gradient(to top,var(--mute) calc(var(--letter-fill,0)*100%),transparent calc(var(--letter-fill,0)*100%));
+  }
+  .tl-space{display:inline-block;width:.3em}
+
+  /* ── spine line ── */
+  .spine{
+    position:absolute;
+    top:0;bottom:0;
+    left:50%; /* start center, animate to 8vw */
+    width:1px;
+    background:var(--ink);
+    transform:scaleY(0);
+    transform-origin:bottom center;
+    z-index:15;
+    pointer-events:none;
+  }
+
+  /* ── spine markers (independent of video groups) ── */
+  .spine-marker{
+    position:absolute;
+    left:calc(8vw - 6px); /* centred on spine final position */
+    top:115%; /* start below viewport */
+    width:12px;
+    height:12px;
+    background:var(--ink);
+    z-index:17;
+    pointer-events:none;
+  }
+
+  /* ── video groups (text + video, no marker) ── */
+  .vg{
+    position:absolute;
+    inset:0;
+    z-index:12;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .vg.active{pointer-events:auto}
+
+  /* text column: right of spine, narrow, vertically centered within vg */
+  .vg-text{
+    position:absolute;
+    top:50%;
+    left:calc(8vw + 2.5rem);
+    width:clamp(200px,20vw,320px);
+    transform:translateY(-50%);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .vg-code{
+    font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10px;
+    letter-spacing:.22em;
+    color:var(--mute);
+    text-transform:uppercase;
+  }
+  .vg-title{
+    font-family:"Inter",sans-serif;
+    font-weight:300;
+    font-size:clamp(22px,2.5vw,36px);
+    line-height:1.05;
+    letter-spacing:-.02em;
+    color:var(--ink);
+  }
+  .vg-desc{
+    font-size:14px;
+    line-height:1.55;
+    color:var(--mute);
+    max-width:32ch;
+  }
+
+  /* per-letter ink-fill for video descriptions */
+  .desc-letter{
+    display:inline-block;
+    line-height:inherit;
+    color:transparent;
+    background-image:linear-gradient(to top,var(--mute) calc(var(--letter-fill,0)*100%),transparent calc(var(--letter-fill,0)*100%));
+    -webkit-background-clip:text;
+    background-clip:text;
+  }
+  .desc-space{display:inline-block;width:.3em}
+
+  /* video column: right of text, vertically centered within vg */
+  .vg-media{
+    position:absolute;
+    top:50%;
+    left:calc(8vw + 2.5rem + clamp(200px,20vw,320px) + 2.5rem);
+    right:clamp(1.5rem,4vw,4rem);
+    transform:translateY(-50%);
+    aspect-ratio:16/9;
+    max-height:62vh;
+    background:#fff; /* solid white block behind video */
+  }
+  .vg-media video{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    clip-path:inset(100% 0 0 0); /* hidden, wipes bottom→top */
+  }
+
+  /* ── scroll hint ── */
+  .scroll-hint{
+    position:absolute;
+    bottom:28px;right:32px;
+    z-index:20;
+    font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:10px;letter-spacing:.25em;color:var(--mute);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;
+    pointer-events:none;
+  }
+  .scroll-hint::after{
+    content:"";display:block;width:1px;height:48px;background:var(--mute);
+    animation:drop 2s ease-in-out infinite;
+  }
+  @keyframes drop{0%,100%{transform:scaleY(.2);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}}
+
+  /* ── footer ── */
+  footer{
+    border-top:1px solid var(--line);
+    padding:80px 32px 60px;
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;
+  }
+  footer .left{
+    font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    font-size:11px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase;line-height:1.8;
+  }
+  footer .right{font-weight:300;font-size:clamp(28px,4vw,48px);line-height:1;letter-spacing:-.02em;max-width:520px;text-align:right}
+  footer .right span{color:var(--mute)}
+
+  /* ── reduced motion ── */
+  @media (prefers-reduced-motion:reduce){
+    .timeline-pin{min-height:auto}
+    .timeline-stage{position:relative;height:auto;overflow:visible}
+    .tl-headline{
+      position:relative;top:auto;left:auto;transform:none;
+      max-width:100%;padding:80px 32px 40px;
+    }
+    .tl-headline .tl-line{white-space:normal;font-size:clamp(32px,6vw,64px)}
+    .tl-letter{color:var(--ink);background:none;-webkit-text-fill-color:var(--ink)}
+    .spine,.spine-marker{display:none}
+    .vg{
+      position:relative;opacity:1;visibility:visible;
+      padding:40px 32px;border-top:1px solid var(--line);
+      display:flex;flex-wrap:wrap;gap:24px;
+    }
+    .vg-text{position:relative;top:auto;left:auto;transform:none;width:auto;flex:1 1 260px}
+    .vg-media{position:relative;top:auto;left:auto;right:auto;transform:none;flex:1 1 400px;max-height:50vh}
+    .vg-media video{clip-path:none}
+    .desc-letter{color:var(--mute);background:none;-webkit-text-fill-color:var(--mute)}
+    .scroll-hint{display:none}
+  }
+
+  /* ── responsive ── */
+  @media (max-width:780px){
+    header{padding:14px 20px}
+    footer{padding-left:20px;padding-right:20px}
+    .tl-headline{left:20px;max-width:80vw}
+    .tl-headline .tl-line{white-space:normal}
+    .spine{left:16px}
+    .spine-marker{left:calc(16px - 6px)}
+    .vg-text{left:calc(16px + 2rem);width:auto;right:20px;top:20px;transform:none}
+    .vg-media{left:20px;right:20px;top:auto;bottom:20px;transform:none;max-height:40vh}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span></span> SPACEX · STARSHIP</div>
+  <nav><b>TEST LIKE YOU FLY</b> &nbsp;·&nbsp; FIELD NOTES 001 — 003</nav>
+</header>
+
+<section class="timeline-pin" id="timeline">
+  <div class="timeline-stage" id="stage">
+
+    <div class="tl-headline" id="headline">
+      <span class="tl-line">Three years.</span>
+      <span class="tl-line"><em>One ship.</em></span>
+      <span class="tl-line">New everything.</span>
+    </div>
+
+    <div class="spine" id="spine"></div>
+
+    <!-- Markers: direct children of stage, ride on the spine -->
+    <span class="spine-marker" id="marker0"></span>
+    <span class="spine-marker" id="marker1"></span>
+    <span class="spine-marker" id="marker2"></span>
+
+    <!-- Video groups: text + video only -->
+    <div class="vg" id="vg0">
+      <div class="vg-text">
+        <span class="vg-code">REC · 001</span>
+        <h2 class="vg-title">Inside the factory</h2>
+        <p class="vg-desc" data-ink>The aft section of the next Starship descends through the high bay — a cathedral of stringers and baffles, mapped in steel.</p>
+      </div>
+      <div class="vg-media">
+        <video src="Snippets/StarshipBuild.mp4" muted autoplay loop playsinline preload="metadata"></video>
+      </div>
+    </div>
+
+    <div class="vg" id="vg1">
+      <div class="vg-text">
+        <span class="vg-code">REC · 002</span>
+        <h2 class="vg-title">Test like you fly</h2>
+        <p class="vg-desc" data-ink>V3 launches, climbs, and falls — each attempt a data point in the iterative campaign toward full, rapid reuse.</p>
+      </div>
+      <div class="vg-media">
+        <video src="Snippets/V3Launch%26Fall.mp4" muted autoplay loop playsinline preload="metadata"></video>
+      </div>
+    </div>
+
+    <div class="vg" id="vg2">
+      <div class="vg-text">
+        <span class="vg-code">REC · 003</span>
+        <h2 class="vg-title">The collection</h2>
+        <p class="vg-desc" data-ink>A field log of Starship moments: build, pad, catch — three views of one relentless machine, one evolving problem.</p>
+      </div>
+      <div class="vg-media">
+        <video src="Snippets/rocketCollection.mp4" muted autoplay loop playsinline preload="metadata"></video>
+      </div>
+    </div>
+
+    <div class="scroll-hint">SCROLL</div>
+  </div>
+</section>
+
+<footer>
+  <div class="left">
+    SOURCE · SPACEX OFFICIAL<br/>
+    YOUTUBE · ANe_HW4X8oc<br/>
+    COMPILED · 2026.06.08
+  </div>
+  <div class="right"><span>End of</span> field log.</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  if (window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // ─── split headline text into per-letter spans ───
+  function splitLetters(container, cls) {
+    const lines = container.querySelectorAll('.tl-line');
+    lines.forEach(line => {
+      const frag = document.createDocumentFragment();
+      Array.from(line.childNodes).forEach(node => {
+        if (node.nodeType === 3) {
+          Array.from(node.textContent).forEach(ch => {
+            if (ch === ' ') {
+              const sp = document.createElement('span');
+              sp.className = 'tl-space';
+              sp.innerHTML = '&nbsp;';
+              frag.appendChild(sp);
+            } else {
+              const sp = document.createElement('span');
+              sp.className = cls;
+              sp.textContent = ch;
+              frag.appendChild(sp);
+            }
+          });
+        } else if (node.nodeType === 1) {
+          const clone = node.cloneNode(false);
+          Array.from(node.childNodes).forEach(child => {
+            if (child.nodeType === 3) {
+              Array.from(child.textContent).forEach(ch => {
+                if (ch === ' ') {
+                  const sp = document.createElement('span');
+                  sp.className = 'tl-space';
+                  sp.innerHTML = '&nbsp;';
+                  clone.appendChild(sp);
+                } else {
+                  const sp = document.createElement('span');
+                  sp.className = cls;
+                  sp.textContent = ch;
+                  clone.appendChild(sp);
+                }
+              });
+            }
+          });
+          frag.appendChild(clone);
+        }
+      });
+      line.textContent = '';
+      line.appendChild(frag);
+    });
+  }
+
+  // Split description text into letter spans
+  function splitDesc(el) {
+    const text = el.textContent;
+    const frag = document.createDocumentFragment();
+    Array.from(text).forEach(ch => {
+      if (ch === ' ') {
+        const sp = document.createElement('span');
+        sp.className = 'desc-space';
+        sp.innerHTML = '&nbsp;';
+        frag.appendChild(sp);
+      } else {
+        const sp = document.createElement('span');
+        sp.className = 'desc-letter';
+        sp.textContent = ch;
+        frag.appendChild(sp);
+      }
+    });
+    el.textContent = '';
+    el.appendChild(frag);
+  }
+
+  const headline = document.getElementById('headline');
+  splitLetters(headline, 'tl-letter');
+
+  document.querySelectorAll('.vg-desc[data-ink]').forEach(el => splitDesc(el));
+
+  // ─── elements ───
+  const spine = document.getElementById('spine');
+  const vgs = [document.getElementById('vg0'), document.getElementById('vg1'), document.getElementById('vg2')];
+  const markers = [document.getElementById('marker0'), document.getElementById('marker1'), document.getElementById('marker2')];
+  const headlineLetters = headline.querySelectorAll('.tl-letter');
+  const SPINE_FINAL = '8vw';
+
+  // ─── phase timing (fractions of master timeline 0→1) ───
+  const INTRO_END   = 0.06;
+  const SWEEP_END   = 0.18;
+  const LOCK_END    = 0.22;
+  const GROUPS_END  = 1.00;
+  const gw = (GROUPS_END - LOCK_END) / 3; // group window
+
+  // ─── initial state (match CSS) ───
+  gsap.set(headlineLetters, { '--letter-fill': 0 });
+  gsap.set(headline, { '--sweep': '100%' });
+  gsap.set(spine, { scaleY: 0, left: '50%' });
+
+  vgs.forEach(vg => {
+    gsap.set(vg, { autoAlpha: 0, yPercent: 120 });
+    const descLetters = vg.querySelectorAll('.desc-letter');
+    if (descLetters.length) gsap.set(descLetters, { '--letter-fill': 0 });
+    const video = vg.querySelector('video');
+    if (video) gsap.set(video, { clipPath: 'inset(100% 0 0 0)' });
+  });
+
+  markers.forEach(m => gsap.set(m, { top: '115%' }));
+
+  // ─── master timeline ───
+  const tl = gsap.timeline({
+    defaults: { ease: 'none' },
+    scrollTrigger: {
+      trigger: '#timeline',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: true,
+      invalidateOnRefresh: true,
+    },
+  });
+
+  // Phase 1: Intro — headline ink-fill + spine grow from bottom
+  const lDur = 0.03;
+  const staggerEa = headlineLetters.length > 1
+    ? (INTRO_END - lDur) / (headlineLetters.length - 1)
+    : 0;
+  tl.to(headlineLetters, {
+    '--letter-fill': 1, ease: 'power2.out', duration: lDur,
+    stagger: { each: staggerEa, from: 'start' },
+  }, 0);
+  tl.to(spine, {
+    scaleY: 1, duration: INTRO_END * 0.75, ease: 'power2.inOut',
+  }, INTRO_END * 0.2);
+
+  // Phase 2: Sweep — spine moves center→left edge, headline fades R→L
+  const sweepDur = SWEEP_END - INTRO_END;
+  tl.to(spine, { left: SPINE_FINAL, duration: sweepDur, ease: 'power2.inOut' }, INTRO_END);
+  tl.to(headline, { '--sweep': '0%', duration: sweepDur, ease: 'power2.in' }, INTRO_END);
+
+  // Phase 3: Lock — spine settles
+  tl.to(spine, { left: SPINE_FINAL, duration: LOCK_END - SWEEP_END }, SWEEP_END);
+
+  // Phase 4: Video groups (marker → text → video → advance)
+  vgs.forEach((vg, i) => {
+    const gs = LOCK_END + i * gw;
+    const m = markers[i];
+    const video = vg.querySelector('video');
+    const descLetters = vg.querySelectorAll('.desc-letter');
+
+    // 4a. Marker rises along spine: bottom → visible → vertical center
+    const mrkDur = gw * 0.25;
+    tl.fromTo(m, { top: '115%' }, { top: '50%', duration: mrkDur, ease: 'power3.inOut' }, gs);
+
+    // vg enters concurrently with marker
+    tl.fromTo(vg, { autoAlpha: 0, yPercent: 120 }, {
+      autoAlpha: 1, yPercent: 40, duration: mrkDur * 0.5, ease: 'power2.out',
+    }, gs);
+    tl.to(vg, { yPercent: 0, duration: mrkDur * 0.5, ease: 'power2.inOut' }, gs + mrkDur * 0.5);
+
+    // 4b. Text reveal: per-letter ink-fill on description
+    const txtStart = gs + mrkDur;
+    const txtDur = gw * 0.25;
+    if (descLetters.length) {
+      const ds = descLetters.length > 1 ? (txtDur * 0.85) / (descLetters.length - 1) : 0;
+      tl.to(descLetters, {
+        '--letter-fill': 1, duration: txtDur * 0.2, ease: 'power2.out',
+        stagger: { each: ds, from: 'start' },
+      }, txtStart);
+    }
+
+    // 4c. Video wipe: bottom→top reveal
+    const vidStart = txtStart + txtDur;
+    const vidDur = gw * 0.25;
+    if (video) {
+      tl.to(video, {
+        clipPath: 'inset(0% 0 0 0)', duration: vidDur, ease: 'power2.inOut',
+      }, vidStart);
+    }
+
+    // 4d. Advance: group + marker exit above
+    const advStart = vidStart + vidDur;
+    const advDur = gw * 0.25;
+    tl.to(vg, { yPercent: -120, duration: advDur, ease: 'power2.in' }, advStart);
+    tl.to(vg, { autoAlpha: 0, duration: advDur * 0.2 }, advStart + advDur * 0.8);
+    tl.to(m, { top: '-15%', duration: advDur, ease: 'power2.in' }, advStart);
+  });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => ScrollTrigger.refresh());
+  }
+})();
+</script>
+</body>
+</html>
