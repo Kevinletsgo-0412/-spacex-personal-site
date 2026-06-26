@@ -238,6 +238,17 @@ export default function SystemsTimeline({ ready = true }) {
       return undefined
     }
 
+    const resetStarlinkMask = () => {
+      const maskEl = maskRef.current
+      if (!maskEl) return
+
+      gsap.set(maskEl, {
+        '--st-mask-right': 100,
+        '--st-mask-top': 50,
+        '--st-mask-bottom': 50,
+      })
+    }
+
     const applyInitialState = () => {
       gsap.set(letters, { '--letter-fill': 0 })
       gsap.set(headline, { autoAlpha: 1, y: 0 })
@@ -278,6 +289,7 @@ export default function SystemsTimeline({ ready = true }) {
           autoAlpha: 0,
         })
       })
+      resetStarlinkMask()
     }
 
     applyInitialState()
@@ -313,6 +325,19 @@ export default function SystemsTimeline({ ready = true }) {
       })
     }
 
+    const syncScrollDrivenState = (self) => {
+      const timelineTime = self.progress * TRANSITION_END
+
+      syncVideoPlayback(timelineTime)
+
+      // Numeric scrub can visually lag behind the real scroll position. If
+      // the user reverses quickly out of the Starlink reveal, hide the mask
+      // immediately once the real scroll position is back before the sweep.
+      if (timelineTime < TRANSITION_LINE_START) {
+        resetStarlinkMask()
+      }
+    }
+
     const buildAnimation = () => {
       if (cancelled) return
 
@@ -327,14 +352,11 @@ export default function SystemsTimeline({ ready = true }) {
             end: 'bottom bottom',
             scrub: 1.15,
             invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              syncVideoPlayback(self.progress * TRANSITION_END)
-            },
-            onRefresh: (self) => {
-              syncVideoPlayback(self.progress * TRANSITION_END)
-            },
+            onUpdate: syncScrollDrivenState,
+            onRefresh: syncScrollDrivenState,
             onLeaveBack: (self) => {
               self.animation?.progress(0)
+              resetStarlinkMask()
               syncVideoPlayback(0)
             },
           },
@@ -685,6 +707,15 @@ export default function SystemsTimeline({ ready = true }) {
         //  avoiding clipPath string-parsing jumps.)
         const maskEl = maskRef.current
         if (maskEl) {
+          tl.set(
+            maskEl,
+            {
+              '--st-mask-right': 100,
+              '--st-mask-top': 50,
+              '--st-mask-bottom': 50,
+            },
+            0,
+          )
           gsap.set(maskEl, {
             '--st-mask-right': 100,
             '--st-mask-top': 50,
