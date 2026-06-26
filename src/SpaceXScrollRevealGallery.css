@@ -237,12 +237,10 @@
 
 /* ─── Intro hero text (before slides) ─────────────────────────────────
  *
- * Three lines of large centred text, each letter rendered via ink-fill
- * (same technique as SystemsTimeline/Page 3). The container is absolutely
- * positioned inside the sticky stage at z-index 90 so it paints above the
- * header and slides. GSAP drives --letter-fill per-character, line-by-line,
- * then translates + fades the whole container up and away before slide 0
- * enters.
+ * Three lines of large centred text, each letter rendered via the same
+ * formula used in the localhost:5199 motion test. GSAP reveals line 1 from
+ * the centre outward, line 2 from left to right, and line 3 with alternating
+ * horizontal offsets. The typography then fades in place before slide 0.
  */
 .srg-intro-container {
   position: absolute;
@@ -255,6 +253,7 @@
   gap: clamp(0.4rem, 1.2vh, 1rem);
   padding: clamp(2rem, 5vw, 4rem);
   pointer-events: none;
+  perspective: 900px;
   will-change: transform, opacity;
 }
 
@@ -262,48 +261,66 @@
   display: block;
   font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
   font-weight: 1000;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.06em;
   text-align: center;
   color: #0a0a0a;
-  line-height: 1.05;
+  line-height: 0.96;
+  white-space: nowrap;
 }
 
 .srg-intro-line-1 {
-  font-size: clamp(3.2rem, 8.5vw, 8.5rem);
+  font-size: clamp(4.1rem, 10.2vw, 10.5rem);
   text-transform: uppercase;
 }
 
 .srg-intro-line-2 {
-  font-size: clamp(1.3rem, 3vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  margin-top: 0.35rem;
+  font-size: clamp(1.2rem, 3vw, 3.1rem);
+  font-weight: 760;
+  letter-spacing: -0.025em;
   text-transform: uppercase;
   color: #1a1a1a;
 }
 
 .srg-intro-line-3 {
-  font-size: clamp(0.95rem, 1.8vw, 1.7rem);
-  font-weight: 500;
+  margin-top: 0.55rem;
+  font-size: clamp(0.9rem, 1.65vw, 1.55rem);
+  font-weight: 520;
   letter-spacing: 0.01em;
   text-transform: none;
-  color: rgba(0, 0, 0, 0.65);
+  color: rgba(0, 0, 0, 0.66);
 }
 
-/* Per-letter ink fill — identical technique to SystemsTimeline.
-   Letter itself never moves; the gradient stop climbs 0→100% as
-   --letter-fill goes 0→1, painting the glyph from the bottom up. */
+/* Per-letter ink fill — copied from the 5199 demo. The unrevealed part
+   stays faint grey, so letters feel like they are being inked in rather
+   than merely fading from transparent. */
 .srg-intro-letter {
+  --letter-fill: 0;
   display: inline-block;
   line-height: inherit;
+  opacity: 0;
   color: transparent;
+  transform-origin: 50% 75%;
   background-image: linear-gradient(
     to top,
-    #0a0a0a calc(var(--letter-fill, 0) * 100%),
-    transparent calc(var(--letter-fill, 0) * 100%)
+    #090909 calc(var(--letter-fill, 0) * 100%),
+    rgba(0, 0, 0, 0.12) calc(var(--letter-fill, 0) * 100%)
   );
   -webkit-background-clip: text;
   background-clip: text;
-  will-change: background-image;
+  will-change: transform, opacity, background-image;
+}
+
+.srg-intro-line-1 .srg-intro-letter {
+  transform: translateY(38px) rotateX(72deg) scaleX(0.62);
+}
+
+.srg-intro-line-2 .srg-intro-letter {
+  transform: translateY(28px) skewX(-12deg) scaleX(0.78);
+}
+
+.srg-intro-line-3 .srg-intro-letter {
+  transform: translateY(22px) scale(0.96);
 }
 
 .srg-intro-space {
@@ -376,6 +393,8 @@
   .srg-intro-letter {
     color: #0a0a0a !important;
     background-image: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
   .srg-intro-container {
     transform: none !important;

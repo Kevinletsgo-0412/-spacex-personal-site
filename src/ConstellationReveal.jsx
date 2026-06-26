@@ -1,12 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { animate, splitText, stagger } from 'animejs'
 import SatelliteGlobe from './components/SatelliteGlobe'
-
-/* ━━━ Text for Page 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const REVEAL_TEXT =
-  'We are building the world\'s most advanced satellite constellation — ' +
-  'connecting the unconnected, from the peaks of the Himalayas ' +
-  'to the most remote islands of the Pacific.'
 
 /* ━━━ Star-field ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function makeStars(count) {
@@ -23,112 +16,42 @@ function makeStars(count) {
 const STARS_A = makeStars(160)
 const STARS_B = makeStars(90)
 
-/* ━━━ Scroll-region split ━━━━━━━━━━━━━━━━━━━━━━━
-   Legacy = word reveal + glow hold + mask sweep + vertical expansion
-   Coda   = Page 5 globe visible, sticky hold for users to absorb        */
-const LEGACY_SCROLL_RATIO = 0.85
-
-/*  Legacy progress map (within 0–1 of legacy range):
-    0.00 – 0.22  word animation
-    0.22 – 0.30  glow fade-in
-    0.30 – 0.60  hold  (glow visible, page pinned)
-    0.60 – 0.68  glow fade-out
-    0.68 – 0.93  horizontal mask sweep
-    0.93 – 1.00  vertical mask expansion                                  */
-
 /* ━━━ Component ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function ConstellationReveal() {
   const wrapperRef = useRef(null)
-  const textRef = useRef(null)
   const maskRef = useRef(null)
-  const glowRef = useRef(null)
 
-  /* ── Anime.js word reveal + scroll driver ── */
+  /* ── Scroll-driven mask sweep → vertical expansion ── */
   useEffect(() => {
-    const textEl = textRef.current
     const mask = maskRef.current
-    if (!textEl || !mask) return
-
-    const split = splitText(textEl, { words: { wrap: 'clip' } })
-
-    const wordAnim = animate(split.words, {
-      y: ['100%', '0%'],
-      opacity: [0, 1],
-      duration: 750,
-      ease: 'out(3)',
-      delay: stagger(100),
-      autoplay: false,
-    })
+    if (!mask) return
 
     function onScroll() {
       const wrapper = wrapperRef.current
       if (!wrapper) return
 
       const rect = wrapper.getBoundingClientRect()
-      if (rect.bottom < 0 || rect.top > window.innerHeight) {
-        if (glowRef.current) glowRef.current.style.opacity = '0'
-        return
-      }
+      if (rect.bottom < 0 || rect.top > window.innerHeight) return
 
       const totalScroll = wrapper.offsetHeight - window.innerHeight
       const scrolled = Math.max(0, -rect.top)
-      const legacyEnd = totalScroll * LEGACY_SCROLL_RATIO
-      const glow = glowRef.current
+      const progress =
+        totalScroll > 0 ? Math.min(1, scrolled / totalScroll) : 0
 
-      if (scrolled <= legacyEnd) {
-        const progress = legacyEnd > 0 ? Math.min(1, scrolled / legacyEnd) : 0
-
-        /* Phase 1 — word animation (0.00 – 0.22) */
-        if (progress <= 0.22) {
-          const p = progress / 0.22
-          wordAnim.seek(p * wordAnim.duration)
-          if (glow) glow.style.opacity = '0'
-          mask.style.clipPath = 'inset(50% 100% 50% 0)'
-
-        /* Phase 2 — glow fade-in (0.22 – 0.30) */
-        } else if (progress <= 0.30) {
-          wordAnim.seek(wordAnim.duration)
-          const rawP = (progress - 0.22) / 0.08
-          const easedP = rawP * rawP * (3 - 2 * rawP)
-          if (glow) glow.style.opacity = String(easedP)
-          mask.style.clipPath = 'inset(50% 100% 50% 0)'
-
-        /* Phase 3 — hold / glow visible (0.30 – 0.60) */
-        } else if (progress <= 0.60) {
-          wordAnim.seek(wordAnim.duration)
-          if (glow) glow.style.opacity = '1'
-          mask.style.clipPath = 'inset(50% 100% 50% 0)'
-
-        /* Phase 4 — glow fade-out (0.60 – 0.68) */
-        } else if (progress <= 0.68) {
-          wordAnim.seek(wordAnim.duration)
-          const rawP = 1 - (progress - 0.60) / 0.08
-          const easedP = rawP * rawP * (3 - 2 * rawP)
-          if (glow) glow.style.opacity = String(easedP)
-          mask.style.clipPath = 'inset(50% 100% 50% 0)'
-
-        /* Phase 5 — horizontal mask sweep (0.68 – 0.93) */
-        } else if (progress <= 0.93) {
-          wordAnim.seek(wordAnim.duration)
-          if (glow) glow.style.opacity = '0'
-          const p = (progress - 0.68) / 0.25
-          const rightInset = ((1 - p) * 100).toFixed(1)
-          mask.style.clipPath = `inset(calc(50% - 8px) ${rightInset}% calc(50% - 8px) 0%)`
-
-        /* Phase 6 — vertical mask expansion (0.93 – 1.00) */
-        } else {
-          wordAnim.seek(wordAnim.duration)
-          if (glow) glow.style.opacity = '0'
-          const p = (progress - 0.93) / 0.07
-          const eased = 1 - Math.pow(1 - p, 2)
-          const vertInset = (50 * (1 - eased)).toFixed(1)
-          mask.style.clipPath = `inset(${vertInset}% 0% ${vertInset}% 0%)`
-        }
-      } else {
-        /* Coda — Page 5 globe stays fully visible while wrapper finishes */
-        wordAnim.seek(wordAnim.duration)
-        if (glow) glow.style.opacity = '0'
-        mask.style.clipPath = 'inset(0% 0% 0% 0%)'
+      // Phase 1 — horizontal sweep: left → right (0.00 – 0.55)
+      if (progress <= 0.55) {
+        const p = progress / 0.55
+        const rightInset = ((1 - p) * 100).toFixed(1)
+        mask.style.clipPath =
+          `inset(calc(50% - 8px) ${rightInset}% calc(50% - 8px) 0%)`
+      }
+      // Phase 2 — vertical expansion: up + down (0.55 – 1.00)
+      else {
+        const p = (progress - 0.55) / 0.45
+        const eased = 1 - Math.pow(1 - p, 2)
+        const vertInset = (50 * (1 - eased)).toFixed(1)
+        mask.style.clipPath =
+          `inset(${vertInset}% 0% ${vertInset}% 0%)`
       }
     }
 
@@ -137,7 +60,6 @@ export default function ConstellationReveal() {
 
     return () => {
       window.removeEventListener('scroll', onScroll)
-      split.revert()
     }
   }, [])
 
@@ -145,17 +67,7 @@ export default function ConstellationReveal() {
   return (
     <div ref={wrapperRef} style={{ height: '850vh' }}>
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        {/* Page 4 — pure white, word reveal */}
-        <div className="absolute inset-0 bg-white flex items-center justify-center px-8 md:px-16 lg:px-24">
-          <p
-            ref={textRef}
-            className="max-w-3xl text-2xl md:text-3xl lg:text-4xl leading-relaxed text-center font-light text-gray-900 tracking-wide"
-          >
-            {REVEAL_TEXT}
-          </p>
-        </div>
-
-        {/* Mask → Page 5 (satellite + globe + orbit rings) */}
+        {/* Mask → globe + star field + HUD */}
         <div
           ref={maskRef}
           className="absolute inset-0 z-10"
@@ -170,7 +82,7 @@ export default function ConstellationReveal() {
           {/* 3D satellite + globe + orbit-ring scene */}
           <SatelliteGlobe theme="dark" />
 
-          {/* Minimal HUD overlay — keeps the brand archive language alive */}
+          {/* HUD overlays */}
           <header className="cr-hud-top">
             <div>
               <span className="cr-hud-pulse" aria-hidden="true" />
@@ -211,7 +123,7 @@ export default function ConstellationReveal() {
           to   { opacity: 0.45; }
         }
 
-        /* ━━━ Page 5 HUD overlays ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        /* ━━━ HUD overlays ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         .cr-hud-top, .cr-hud-bottom {
           position: absolute;
           left: 0;

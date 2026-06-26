@@ -25,7 +25,11 @@ function CharSplit({ text }) {
             &nbsp;
           </span>
         ) : (
-          <span key={i} className="srg-intro-letter">
+          <span
+            key={i}
+            className="srg-intro-letter"
+            data-archive-dir={i % 2 === 0 ? -18 : 18}
+          >
             {ch}
           </span>
         ),
@@ -207,14 +211,18 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
        * Stride between consecutive slides equals ENTRY + HOLD. EXIT is
        * derived (ENTRY − PEEK) so slide i+1 reaches centre exactly when
        * slide i finishes exiting. */
-      const INTRO_DURATION = 0.80 // intro reveal + hold + exit
-      const INTRO_VH = 140
-
       const ENTRY = 0.65        // Phase A — image rises to centre
       const HOLD = 0.26         // Phase B — image LOCKED, caption reveals
       const PEEK = 0.18         // Phase C — image LOCKED, next slide peeks
       const EXIT = ENTRY - PEEK // Phase D — image retreats while next rises
       const STRIDE = ENTRY + HOLD
+      const SLIDE_VH = 150
+
+      /* Match the localhost:5199 archive intro budget: 240vh. Its GSAP
+       * duration is derived from the slide stride ratio so extending the
+       * intro does not materially change the six image phase speed. */
+      const INTRO_VH = 240
+      const INTRO_DURATION = (INTRO_VH / SLIDE_VH) * STRIDE
 
       const FROM_Y = 100
       const EXIT_Y = -45
@@ -226,7 +234,6 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
       /* Scroll budget — intro occupies INTRO_VH, then each slide cycle
        * consumes SLIDE_VH of fresh scroll. TAIL_VH covers the last
        * slide's hold + caption reveal before sticky releases. */
-      const SLIDE_VH = 150
       const TAIL_VH = 60
       spacer.style.height = `${INTRO_VH + slides.length * SLIDE_VH + TAIL_VH}vh`
 
@@ -262,7 +269,34 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
       const line3Letters =
         introContainer ? introContainer.querySelectorAll('[data-intro-line="2"] .srg-intro-letter') : []
 
-      if (introLetterEls.length) gsap.set(introLetterEls, { '--letter-fill': 0 })
+      if (introLetterEls.length) {
+        gsap.set(introLetterEls, {
+          '--letter-fill': 0,
+          autoAlpha: 0,
+          transformOrigin: '50% 75%',
+        })
+      }
+      if (line1Letters.length) {
+        gsap.set(line1Letters, {
+          y: 38,
+          rotateX: 72,
+          scaleX: 0.62,
+        })
+      }
+      if (line2Letters.length) {
+        gsap.set(line2Letters, {
+          y: 28,
+          skewX: -12,
+          scaleX: 0.78,
+        })
+      }
+      if (line3Letters.length) {
+        gsap.set(line3Letters, {
+          x: (_index, target) => Number(target.dataset.archiveDir) || 0,
+          y: 22,
+          scale: 0.96,
+        })
+      }
       if (introContainer) gsap.set(introContainer, { yPercent: 0, opacity: 1 })
 
       /* Master timeline. Intro occupies 0→INTRO_DURATION, then slides
@@ -279,61 +313,89 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
         },
       })
 
-      /* ── Intro: three lines reveal sequentially, then exit ──────
-       * Line 1 — "ORBITAL ARCHIVE" (0.00 → 0.20)
-       * Line 2 — "SIX ATTEMPTS..."     (0.16 → 0.36)
-       * Line 3 — "A TIMELINE..."       (0.32 → 0.52)
-       * Hold + exit                    (0.52 → 0.78)
+      /* ── Intro: mirror the localhost:5199 archive typography.
        *
-       * Each line uses the per-letter ink-fill technique from Page 3:
-       * --letter-fill goes 0→1, staggered left-to-right within the line.
-       * After all three are done, the container translates up + fades. */
-      const INTRO_LETTER_DUR = 0.03
+       * The first line reveals from the centre outward. The second line
+       * reveals left-to-right. The third line reveals left-to-right while
+       * letters alternate in from ±18px. Timing follows the 5199 demo:
+       * line delay .18, character spread .26, character duration .32,
+       * then the text only fades out from .82 → 1.00.
+       */
+      const ARCHIVE_LINE_DELAY = 0.18
+      const ARCHIVE_CHAR_SPREAD = 0.26
+      const ARCHIVE_CHAR_DURATION = 0.32
+      const ARCHIVE_FADE_START = 0.82
 
-      if (line1Letters.length) {
-        const each = line1Letters.length > 1
-          ? (0.20 - INTRO_LETTER_DUR) / (line1Letters.length - 1)
-          : 0
-        tl.to(line1Letters, {
-          '--letter-fill': 1,
-          duration: INTRO_LETTER_DUR,
-          ease: 'power2.out',
-          stagger: { each, from: 'start' },
-        }, 0)
+      const scheduleArchiveLine = (letters, lineIndex) => {
+        const list = Array.from(letters)
+        list.forEach((letter, index) => {
+          const order =
+            lineIndex === 0
+              ? Math.abs(index - (list.length - 1) / 2) / list.length
+              : index / list.length
+          const start =
+            (lineIndex * ARCHIVE_LINE_DELAY + order * ARCHIVE_CHAR_SPREAD) *
+            INTRO_DURATION
+          const duration = ARCHIVE_CHAR_DURATION * INTRO_DURATION
+
+          if (lineIndex === 0) {
+            tl.to(
+              letter,
+              {
+                '--letter-fill': 1,
+                autoAlpha: 1,
+                y: 0,
+                rotateX: 0,
+                scaleX: 1,
+                duration,
+                ease: 'power1.inOut',
+              },
+              start,
+            )
+          } else if (lineIndex === 1) {
+            tl.to(
+              letter,
+              {
+                '--letter-fill': 1,
+                autoAlpha: 1,
+                y: 0,
+                skewX: 0,
+                scaleX: 1,
+                duration,
+                ease: 'power1.inOut',
+              },
+              start,
+            )
+          } else {
+            tl.to(
+              letter,
+              {
+                '--letter-fill': 1,
+                autoAlpha: 1,
+                x: 0,
+                y: 0,
+                scale: 1,
+                duration,
+                ease: 'power1.inOut',
+              },
+              start,
+            )
+          }
+        })
       }
 
-      if (line2Letters.length) {
-        const each = line2Letters.length > 1
-          ? (0.20 - INTRO_LETTER_DUR) / (line2Letters.length - 1)
-          : 0
-        tl.to(line2Letters, {
-          '--letter-fill': 1,
-          duration: INTRO_LETTER_DUR,
-          ease: 'power2.out',
-          stagger: { each, from: 'start' },
-        }, 0.16)
-      }
+      scheduleArchiveLine(line1Letters, 0)
+      scheduleArchiveLine(line2Letters, 1)
+      scheduleArchiveLine(line3Letters, 2)
 
-      if (line3Letters.length) {
-        const each = line3Letters.length > 1
-          ? (0.20 - INTRO_LETTER_DUR) / (line3Letters.length - 1)
-          : 0
-        tl.to(line3Letters, {
-          '--letter-fill': 1,
-          duration: INTRO_LETTER_DUR,
-          ease: 'power2.out',
-          stagger: { each, from: 'start' },
-        }, 0.32)
-      }
-
-      /* Intro exit — translate up + fade out (0.52 → 0.78) */
+      /* Intro exit — 5199 fades the archive typography out in place. */
       if (introContainer) {
         tl.to(introContainer, {
-          yPercent: -28,
+          yPercent: 0,
           opacity: 0,
-          duration: 0.26,
-          ease: 'power2.in',
-        }, 0.52)
+          duration: (1 - ARCHIVE_FADE_START) * INTRO_DURATION,
+          ease: 'none',
+        }, ARCHIVE_FADE_START * INTRO_DURATION)
       }
 
       /* ── Slides — each shifted by INTRO_DURATION ──────────────── */
