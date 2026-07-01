@@ -1,9 +1,8 @@
 node_modules/
 dist/
 .DS_Store
-.env
+.env*
 tsconfig.tsbuildinfo
 *.mov
 .playwright-cli/
 .vercel/
-node_modules/
