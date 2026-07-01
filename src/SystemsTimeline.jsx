@@ -86,26 +86,68 @@ const RECORDS = [
   },
 ]
 
-const CLOSING_TEXT =
-  "We are building the world's most advanced satellite constellation — " +
-  'connecting the unconnected, from the peaks of the Himalayas ' +
-  'to the most remote islands of the Pacific.'
+const CLOSING_LINES = [
+  'SPACEX IS BUILDING',
+  "THE WORLD'S MOST ADVANCED",
+  'SATELLITE CONSTELLATION —',
+  'CONNECTING THE UNCONNECTED,',
+  'FROM THE HIGHEST PEAKS',
+  'OF THE HIMALAYAS TO',
+  'THE MOST REMOTE ISLANDS',
+  'OF THE PACIFIC.',
+]
+const CLOSING_LINE_STEP = 0.11
+const CLOSING_LINE_TRAVEL_DURATION = 0.3
+const CLOSING_LINE_START_Y = 190
+const CLOSING_LINE_END_Y = -210
 
 const SCENES_START = 0.4
 const SCENES_END = 0.84
 const SCENE_DURATION = (SCENES_END - SCENES_START) / RECORDS.length
+const HEADER_REVEAL_START = 0
+const HEADER_REVEAL_END = 0.12
+const EMBEDDED_HEADER_REVEAL_START_RATIO = 0.68
+const EMBEDDED_HEADER_REVEAL_END_RATIO = 1
+const HEADER_LETTER_DURATION = 0.018
+const HEADLINE_REVEAL_START = 0.01
+const HEADLINE_REVEAL_END = 0.17
+const HEADLINE_LETTER_DURATION = 0.035
+const SYSTEMS_SCRUB = true
 
 const TRANSITION_TEXT_START = 0.91
-const TRANSITION_TEXT_DURATION = 0.17
-const TRANSITION_LINE_START = 1.12
+const TRANSITION_TEXT_DURATION =
+  CLOSING_LINE_STEP * (CLOSING_LINES.length - 1) +
+  CLOSING_LINE_TRAVEL_DURATION
+const TRANSITION_LINE_START =
+  TRANSITION_TEXT_START + TRANSITION_TEXT_DURATION + 0.06
 const TRANSITION_LINE_DURATION = 0.16
-const TRANSITION_EXPAND_START = 1.36
+const TRANSITION_EXPAND_START =
+  TRANSITION_LINE_START + TRANSITION_LINE_DURATION + 0.08
 const TRANSITION_EXPAND_DURATION = 0.16
-const TRANSITION_END = TRANSITION_EXPAND_START + TRANSITION_EXPAND_DURATION
-
 const SYSTEMS_SCROLL_DISTANCE_VH = 1350
+
+const STARLINK_SVG_RISE_DISTANCE = '68vh'
+const STARLINK_SVG_START_SCALE = 0.34
+const STARLINK_SVG_END_SCALE = 3.15
+const STARLINK_SVG_PIN_SCROLL_VH = 430
+const STARLINK_SVG_RISE_PROGRESS = 0.46
+const STARLINK_SVG_SCALE_PROGRESS = 1 - STARLINK_SVG_RISE_PROGRESS
+const STARLINK_SVG_SEQUENCE_START =
+  TRANSITION_EXPAND_START + TRANSITION_EXPAND_DURATION
+const STARLINK_SVG_SEQUENCE_DURATION =
+  STARLINK_SVG_PIN_SCROLL_VH / SYSTEMS_SCROLL_DISTANCE_VH
+const STARLINK_SVG_RISE_DURATION =
+  STARLINK_SVG_SEQUENCE_DURATION * STARLINK_SVG_RISE_PROGRESS
+const STARLINK_SVG_SCALE_DURATION =
+  STARLINK_SVG_SEQUENCE_DURATION * STARLINK_SVG_SCALE_PROGRESS
+const TRANSITION_END =
+  STARLINK_SVG_SEQUENCE_START + STARLINK_SVG_SEQUENCE_DURATION
+
+export const SYSTEMS_TIMELINE_DURATION = TRANSITION_END
+export const SYSTEMS_SCROLL_RANGE_VH =
+  SYSTEMS_SCROLL_DISTANCE_VH * SYSTEMS_TIMELINE_DURATION
 const SYSTEMS_SECTION_MIN_HEIGHT = `${
-  100 + SYSTEMS_SCROLL_DISTANCE_VH * TRANSITION_END
+  100 + SYSTEMS_SCROLL_RANGE_VH
 }vh`
 
 function TitleReveal({ lines }) {
@@ -171,7 +213,71 @@ function SummaryReveal({ text }) {
   )
 }
 
-export default function SystemsTimeline({ ready = true }) {
+function HeaderInkText({ text, className = '' }) {
+  return (
+    <span className={className} aria-label={text}>
+      {Array.from(text).map((character, characterIndex) =>
+        character === ' ' ? (
+          <span
+            key={characterIndex}
+            className="systems-timeline-header-space"
+            aria-hidden="true"
+          >
+            &nbsp;
+          </span>
+        ) : (
+          <span
+            key={characterIndex}
+            className="systems-timeline-header-letter"
+            aria-hidden="true"
+          >
+            {character}
+          </span>
+        ),
+      )}
+    </span>
+  )
+}
+
+function ClosingTextReveal({ lines }) {
+  return (
+    <>
+      {lines.map((line, lineIndex) => (
+        <span
+          key={`${line}-${lineIndex}`}
+          className="st-closing-line"
+          aria-hidden="true"
+        >
+          {Array.from(line).map((character, characterIndex) =>
+            character === ' ' ? (
+              <span
+                key={characterIndex}
+                className="st-closing-space"
+                aria-hidden="true"
+              >
+                &nbsp;
+              </span>
+            ) : (
+              <span key={characterIndex} className="st-closing-char">
+                {character}
+              </span>
+            ),
+          )}
+        </span>
+      ))}
+    </>
+  )
+}
+
+export default function SystemsTimeline({
+  ready = true,
+  embedded = false,
+  scrollTriggerRef = null,
+  startOffsetVh = 0,
+  scrollRangeVh = SYSTEMS_SCROLL_RANGE_VH,
+  visibleFromProgress = 0,
+  entryOffsetTime = 0,
+}) {
   const sectionRef = useRef(null)
   const headlineRef = useRef(null)
   const axisLineRef = useRef(null)
@@ -179,6 +285,7 @@ export default function SystemsTimeline({ ready = true }) {
   const videoRefs = useRef([])
   const closingTextRef = useRef(null)
   const maskRef = useRef(null)
+  const starlinkSvgRef = useRef(null)
 
   useEffect(() => {
     const section = sectionRef.current
@@ -186,11 +293,14 @@ export default function SystemsTimeline({ ready = true }) {
     const axisLine = axisLineRef.current
     const scenes = sceneRefs.current.filter(Boolean)
     const videos = videoRefs.current.filter(Boolean)
+    const starlinkSvg = starlinkSvgRef.current
+    const scrollTriggerTarget = embedded ? scrollTriggerRef?.current : section
 
     if (
       !section ||
       !headline ||
       !axisLine ||
+      !scrollTriggerTarget ||
       scenes.length !== RECORDS.length ||
       videos.length !== RECORDS.length
     ) {
@@ -200,6 +310,11 @@ export default function SystemsTimeline({ ready = true }) {
     const letters = Array.from(
       section.querySelectorAll('.systems-timeline-letter'),
     )
+    const headerLetters = Array.from(
+      section.querySelectorAll('.systems-timeline-header-letter'),
+    )
+    const headerPulse = section.querySelector('.systems-timeline-pulse')
+    const headerHint = section.querySelector('.systems-timeline-header-hint')
     const markers = scenes.map((scene) =>
       scene.querySelector('.systems-timeline-scene-marker'),
     )
@@ -238,6 +353,9 @@ export default function SystemsTimeline({ ready = true }) {
       return undefined
     }
 
+    const timelineOffset = embedded ? entryOffsetTime : 0
+    const timelineEnd = TRANSITION_END + timelineOffset
+
     const resetStarlinkMask = () => {
       const maskEl = maskRef.current
       if (!maskEl) return
@@ -250,6 +368,8 @@ export default function SystemsTimeline({ ready = true }) {
     }
 
     const applyInitialState = () => {
+      gsap.set(headerLetters, { '--header-letter-fill': 0, autoAlpha: 0 })
+      gsap.set([headerPulse, headerHint].filter(Boolean), { autoAlpha: 0 })
       gsap.set(letters, { '--letter-fill': 0 })
       gsap.set(headline, { autoAlpha: 1, y: 0 })
       gsap.set(axisLine, {
@@ -290,6 +410,17 @@ export default function SystemsTimeline({ ready = true }) {
         })
       })
       resetStarlinkMask()
+      if (starlinkSvg) {
+        gsap.set(starlinkSvg, {
+          autoAlpha: 0,
+          y: STARLINK_SVG_RISE_DISTANCE,
+          scale: STARLINK_SVG_START_SCALE,
+          transformOrigin: '50% 50%',
+        })
+      }
+      if (embedded) {
+        gsap.set(section, { autoAlpha: 0 })
+      }
     }
 
     applyInitialState()
@@ -301,9 +432,9 @@ export default function SystemsTimeline({ ready = true }) {
 
     const syncVideoPlayback = (timelineTime) => {
       videos.forEach((video, index) => {
-        const sceneStart = SCENES_START + index * SCENE_DURATION
+        const sceneStart = timelineOffset + SCENES_START + index * SCENE_DURATION
         const localProgress = (timelineTime - sceneStart) / SCENE_DURATION
-        const shouldLoad = localProgress > -0.25 && localProgress < 1.08
+        const shouldLoad = localProgress > -0.35 && localProgress < 1.12
         const shouldPlay = localProgress > 0.12 && localProgress < 0.98
 
         if (shouldLoad && !video.getAttribute('src')) {
@@ -312,11 +443,13 @@ export default function SystemsTimeline({ ready = true }) {
           video.load()
         }
 
-        if (shouldPlay && video.dataset.active !== 'true') {
+        if (shouldPlay && (video.dataset.active !== 'true' || video.paused)) {
           video.dataset.active = 'true'
           const playPromise = video.play()
           if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => {})
+            playPromise.catch(() => {
+              video.dataset.active = 'false'
+            })
           }
         } else if (!shouldPlay && video.dataset.active === 'true') {
           video.dataset.active = 'false'
@@ -326,14 +459,23 @@ export default function SystemsTimeline({ ready = true }) {
     }
 
     const syncScrollDrivenState = (self) => {
-      const timelineTime = self.progress * TRANSITION_END
+      const timelineTime = self.progress * timelineEnd
+
+      if (embedded) {
+        const hasReachedEmbeddedStart =
+          self.progress >= visibleFromProgress &&
+          (self.isActive || self.progress > 0)
+        gsap.set(section, {
+          autoAlpha: hasReachedEmbeddedStart ? 1 : 0,
+        })
+      }
 
       syncVideoPlayback(timelineTime)
 
       // Numeric scrub can visually lag behind the real scroll position. If
       // the user reverses quickly out of the Starlink reveal, hide the mask
       // immediately once the real scroll position is back before the sweep.
-      if (timelineTime < TRANSITION_LINE_START) {
+      if (timelineTime < timelineOffset + TRANSITION_LINE_START) {
         resetStarlinkMask()
       }
     }
@@ -347,25 +489,81 @@ export default function SystemsTimeline({ ready = true }) {
         const tl = gsap.timeline({
           defaults: { ease: 'none' },
           scrollTrigger: {
-            trigger: section,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 1.15,
+            trigger: scrollTriggerTarget,
+            start: embedded
+              ? () => `top+=${(startOffsetVh / 100) * window.innerHeight} top`
+              : 'top top',
+            end: embedded
+              ? () => `+=${(scrollRangeVh / 100) * window.innerHeight}`
+              : 'bottom bottom',
+            scrub: SYSTEMS_SCRUB,
             invalidateOnRefresh: true,
             onUpdate: syncScrollDrivenState,
             onRefresh: syncScrollDrivenState,
             onLeaveBack: (self) => {
               self.animation?.progress(0)
+              if (embedded) {
+                gsap.set(section, { autoAlpha: 0 })
+              }
               resetStarlinkMask()
               syncVideoPlayback(0)
             },
           },
         })
 
+        const headerStart =
+          embedded && timelineOffset > 0
+            ? timelineOffset * EMBEDDED_HEADER_REVEAL_START_RATIO
+            : HEADER_REVEAL_START
+        const headerEnd =
+          embedded && timelineOffset > 0
+            ? timelineOffset * EMBEDDED_HEADER_REVEAL_END_RATIO
+            : HEADER_REVEAL_END
+        const headerDuration = headerEnd - headerStart
+        const headerEach =
+          headerLetters.length > 1
+            ? (headerDuration - HEADER_LETTER_DURATION) /
+              (headerLetters.length - 1)
+            : 0
+
+        tl.to(
+          headerLetters,
+          {
+            '--header-letter-fill': 1,
+            autoAlpha: 1,
+            duration: HEADER_LETTER_DURATION,
+            ease: 'power2.out',
+            stagger: { each: Math.max(headerEach, 0), from: 'start' },
+          },
+          headerStart,
+        )
+        if (headerPulse) {
+          tl.to(
+            headerPulse,
+            {
+              autoAlpha: 1,
+              duration: Math.min(0.04, headerDuration * 0.4),
+              ease: 'none',
+            },
+            headerStart,
+          )
+        }
+        if (headerHint) {
+          tl.to(
+            headerHint,
+            {
+              autoAlpha: 1,
+              duration: Math.min(0.06, headerDuration * 0.5),
+              ease: 'none',
+            },
+            headerStart + headerDuration * 0.55,
+          )
+        }
+
         // Phase 1 — headline ink fill.
-        const headlineStart = 0.01
-        const headlineEnd = 0.17
-        const letterDuration = 0.035
+        const headlineStart = timelineOffset + HEADLINE_REVEAL_START
+        const headlineEnd = timelineOffset + HEADLINE_REVEAL_END
+        const letterDuration = HEADLINE_LETTER_DURATION
         const staggerEach =
           letters.length > 1
             ? (headlineEnd - headlineStart - letterDuration) /
@@ -391,12 +589,12 @@ export default function SystemsTimeline({ ready = true }) {
             duration: 0.06,
             ease: 'power2.inOut',
           },
-          0.17,
+          timelineOffset + 0.17,
         )
 
         // Phase 3 — one continuous line accelerates left. Its thickness
         // follows one inverted-U envelope: hairline → broad band → hairline.
-        const shiftStart = 0.24
+        const shiftStart = timelineOffset + 0.24
         const shiftDuration = 0.15
 
         tl.to(
@@ -439,7 +637,7 @@ export default function SystemsTimeline({ ready = true }) {
 
         // Phase 4 — three video records.
         scenes.forEach((scene, index) => {
-          const sceneStart = SCENES_START + index * SCENE_DURATION
+          const sceneStart = timelineOffset + SCENES_START + index * SCENE_DURATION
           const marker = markers[index]
           const connector = connectors[index]
           const copy = copies[index]
@@ -643,52 +841,96 @@ export default function SystemsTimeline({ ready = true }) {
             duration: TRANSITION_TEXT_START - SCENES_END,
             ease: 'power2.in',
           },
-          SCENES_END,
+          timelineOffset + SCENES_END,
         )
 
-        // Phase 6 — closing text word-by-word reveal.
+        // Phase 6 — closing text line-by-line title reveal.
         const closingPara = closingTextRef.current
         if (closingPara) {
-          const rawText = closingPara.textContent || ''
-          const tokens = rawText.split(/(\s+)/)
-          closingPara.innerHTML = tokens
-            .map((t) =>
-              /^\s+$/.test(t)
-                ? ' '
-                : `<span style="display:inline-block;overflow:hidden;vertical-align:top"><span class="st-closing-word">${t}</span></span>`,
-            )
-            .join('')
-          const wordEls = closingPara.querySelectorAll('.st-closing-word')
+          const closingLines = Array.from(
+            closingPara.querySelectorAll('.st-closing-line'),
+          )
 
-          gsap.set(wordEls, {
-            yPercent: 100,
+          gsap.set(closingLines, {
+            xPercent: -50,
+            y: CLOSING_LINE_START_Y,
             autoAlpha: 0,
-            display: 'inline-block',
           })
-
+          gsap.set(closingPara.querySelectorAll('.st-closing-char'), {
+            x: '0.55em',
+            skewX: -12,
+            scaleX: 0.94,
+            autoAlpha: 0.06,
+            color: 'rgb(217, 217, 217)',
+            transformOrigin: '50% 75%',
+          })
           gsap.set(closingPara, { autoAlpha: 1 })
 
-          const wordDuration = 0.03
-          const wordStagger =
-            wordEls.length > 1
-              ? (TRANSITION_TEXT_DURATION - wordDuration) /
-                (wordEls.length - 1)
-              : 0
+          closingLines.forEach((line, lineIndex) => {
+            const chars = Array.from(line.querySelectorAll('.st-closing-char'))
+            const lineStart =
+              timelineOffset + TRANSITION_TEXT_START + lineIndex * CLOSING_LINE_STEP
+            const charDuration = 0.018
+            const revealWindow = CLOSING_LINE_STEP * 0.82
+            const each =
+              chars.length > 1
+                ? (revealWindow - charDuration) / (chars.length - 1)
+                : 0
 
-          tl.to(
-            wordEls,
-            {
-              yPercent: 0,
-              autoAlpha: 1,
-              duration: wordDuration,
-              ease: 'power2.out',
-              stagger: {
-                each: Math.max(wordStagger, 0),
-                from: 'start',
+            tl.fromTo(
+              line,
+              {
+                xPercent: -50,
+                y: CLOSING_LINE_START_Y,
               },
-            },
-            TRANSITION_TEXT_START,
-          )
+              {
+                xPercent: -50,
+                y: CLOSING_LINE_END_Y,
+                duration: CLOSING_LINE_TRAVEL_DURATION,
+                ease: 'none',
+                immediateRender: false,
+              },
+              lineStart,
+            )
+
+            tl.to(
+              line,
+              {
+                autoAlpha: 1,
+                duration: CLOSING_LINE_STEP * 0.38,
+                ease: 'none',
+              },
+              lineStart,
+            )
+
+            tl.to(
+              chars,
+              {
+                x: 0,
+                skewX: 0,
+                scaleX: 1,
+                autoAlpha: 1,
+                color: 'rgb(10, 10, 10)',
+                duration: charDuration,
+                ease: 'power2.out',
+                stagger: {
+                  each: Math.max(each, 0),
+                  from: 'start',
+                },
+              },
+              lineStart + CLOSING_LINE_STEP * 0.08,
+            )
+
+            tl.to(
+              line,
+              {
+                autoAlpha: 0,
+                duration: CLOSING_LINE_STEP * 0.45,
+                ease: 'none',
+              },
+              lineStart + CLOSING_LINE_TRAVEL_DURATION - CLOSING_LINE_STEP * 0.45,
+            )
+          })
 
           tl.to(
             closingPara,
@@ -697,7 +939,7 @@ export default function SystemsTimeline({ ready = true }) {
               duration: TRANSITION_EXPAND_DURATION * 0.55,
               ease: 'power1.in',
             },
-            TRANSITION_EXPAND_START + TRANSITION_EXPAND_DURATION * 0.2,
+            timelineOffset + TRANSITION_EXPAND_START + TRANSITION_EXPAND_DURATION * 0.2,
           )
         }
 
@@ -735,7 +977,7 @@ export default function SystemsTimeline({ ready = true }) {
               ease: 'none',
               immediateRender: false,
             },
-            TRANSITION_LINE_START,
+            timelineOffset + TRANSITION_LINE_START,
           )
           // Concurrently: top/bottom form the thin band
           tl.fromTo(
@@ -751,7 +993,7 @@ export default function SystemsTimeline({ ready = true }) {
               ease: 'none',
               immediateRender: false,
             },
-            TRANSITION_LINE_START,
+            timelineOffset + TRANSITION_LINE_START,
           )
           // Phase 8: top/bottom expand 49.2→0 (vertical fill)
           tl.fromTo(
@@ -767,7 +1009,42 @@ export default function SystemsTimeline({ ready = true }) {
               ease: 'power2.inOut',
               immediateRender: false,
             },
-            TRANSITION_EXPAND_START,
+            timelineOffset + TRANSITION_EXPAND_START,
+          )
+        }
+
+        if (starlinkSvg) {
+          tl.set(
+            starlinkSvg,
+            {
+              autoAlpha: 0,
+              y: STARLINK_SVG_RISE_DISTANCE,
+              scale: STARLINK_SVG_START_SCALE,
+              transformOrigin: '50% 50%',
+            },
+            0,
+          )
+          tl.to(
+            starlinkSvg,
+            {
+              autoAlpha: 1,
+              y: 0,
+              scale: STARLINK_SVG_START_SCALE,
+              duration: STARLINK_SVG_RISE_DURATION,
+              ease: 'none',
+            },
+            timelineOffset + STARLINK_SVG_SEQUENCE_START,
+          )
+          tl.to(
+            starlinkSvg,
+            {
+              scale: STARLINK_SVG_END_SCALE,
+              duration: STARLINK_SVG_SCALE_DURATION,
+              ease: 'none',
+            },
+            timelineOffset +
+              STARLINK_SVG_SEQUENCE_START +
+              STARLINK_SVG_RISE_DURATION,
           )
         }
       }, section)
@@ -796,25 +1073,37 @@ export default function SystemsTimeline({ ready = true }) {
         ctx = null
       }
     }
-  }, [ready])
+  }, [
+    ready,
+    embedded,
+    scrollTriggerRef,
+    startOffsetVh,
+    scrollRangeVh,
+    visibleFromProgress,
+    entryOffsetTime,
+  ])
+
+  const Root = embedded ? 'div' : 'section'
+  const rootClassName = embedded
+    ? 'systems-timeline-embedded'
+    : 'systems-timeline-section'
 
   return (
-    <section
+    <Root
       ref={sectionRef}
-      className="systems-timeline-section"
-      style={{ '--systems-section-min-height': SYSTEMS_SECTION_MIN_HEIGHT }}
+      className={rootClassName}
+      style={{
+        '--systems-section-min-height': SYSTEMS_SECTION_MIN_HEIGHT,
+      }}
     >
       <div className="systems-timeline-sticky">
         <header className="systems-timeline-header">
           <div className="systems-timeline-header-group">
             <span className="systems-timeline-pulse" aria-hidden="true" />
-            <span className="systems-timeline-header-title">
-              Starship Manifest
-            </span>
-            <span className="systems-timeline-header-divider">/</span>
-            <span className="systems-timeline-header-count">
-              03 field records
-            </span>
+            <HeaderInkText
+              text="STARSHIP MANIFEST / 03 FIELD RECORDS"
+              className="systems-timeline-header-ink"
+            />
           </div>
           <div className="systems-timeline-header-group">
             <span className="systems-timeline-header-hint">
@@ -902,10 +1191,11 @@ export default function SystemsTimeline({ ready = true }) {
                     videoRefs.current[index] = element
                   }}
                   data-src={record.src}
+                  autoPlay
                   muted
                   playsInline
                   loop
-                  preload="none"
+                  preload="metadata"
                   aria-label={`${record.phase}: ${record.title}`}
                 />
               </div>
@@ -927,17 +1217,24 @@ export default function SystemsTimeline({ ready = true }) {
         >
           <p
             ref={closingTextRef}
+            aria-label={CLOSING_LINES.join(' ')}
             style={{
-              maxWidth: '45rem',
+              position: 'relative',
+              width: 'min(94vw, 94rem)',
+              height: '64vh',
+              margin: 0,
               textAlign: 'center',
-              fontSize: 'clamp(1.5rem, 2.5vw, 2.25rem)',
-              fontWeight: 300,
-              lineHeight: 1.625,
+              fontFamily:
+                'Impact, Haettenschweiler, "Arial Narrow Bold", "Space Grotesk", system-ui, sans-serif',
+              fontSize: 'clamp(2.1rem, 5.25vw, 6.9rem)',
+              fontWeight: 1000,
+              lineHeight: 0.82,
               color: 'var(--systems-ink)',
-              letterSpacing: '0.025em',
+              letterSpacing: '-0.068em',
+              textTransform: 'uppercase',
             }}
           >
-            {CLOSING_TEXT}
+            <ClosingTextReveal lines={CLOSING_LINES} />
           </p>
         </div>
 
@@ -986,6 +1283,15 @@ export default function SystemsTimeline({ ready = true }) {
             />
           </div>
           <SatelliteGlobe theme="dark" />
+          <div className="systems-starlink-svg-layer" aria-hidden="true">
+            <img
+              ref={starlinkSvgRef}
+              className="systems-starlink-svg"
+              src="/starlinkSVG.svg"
+              alt=""
+              draggable="false"
+            />
+          </div>
         </div>
 
         <style>{`
@@ -1005,6 +1311,6 @@ export default function SystemsTimeline({ ready = true }) {
           }
         `}</style>
       </div>
-    </section>
+    </Root>
   )
 }

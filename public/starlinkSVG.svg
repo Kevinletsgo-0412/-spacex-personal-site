@@ -1,0 +1,56 @@
+<svg width="1600" height="768" viewBox="0 0 1600 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Minimal black and white Starlink-style satellite icon</title>
+  <desc id="desc">A simple front-view satellite with two long horizontal solar panels and a central body, drawn in black and white with bold clean outlines.</desc>
+
+  <rect width="1600" height="768" fill="#000000"/>
+
+  <g fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Left solar panel -->
+    <rect x="40" y="248" width="655" height="270" rx="4"/>
+
+    <!-- Right solar panel -->
+    <rect x="905" y="248" width="655" height="270" rx="4"/>
+
+    <!-- Panel connector arms -->
+    <rect x="695" y="355" width="42" height="56"/>
+    <rect x="863" y="355" width="42" height="56"/>
+
+    <!-- Small side joints -->
+    <rect x="735" y="342" width="30" height="82"/>
+    <rect x="835" y="342" width="30" height="82"/>
+
+    <!-- Main satellite body -->
+    <rect x="765" y="225" width="70" height="270" rx="8"/>
+
+    <!-- Top block -->
+    <path d="M778 225 V188 H822 V225"/>
+
+    <!-- Bottom black band / base separation -->
+    <path d="M765 495 H835"/>
+
+    <!-- Simple lower antenna / base shape -->
+    <path d="M765 495 L735 560 H865 L835 495"/>
+    <path d="M800 560 V615"/>
+    <path d="M765 560 L800 615 L835 560"/>
+    <path d="M785 615 H815"/>
+  </g>
+
+  <!-- White fill accents for the simple body shapes -->
+  <g fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round">
+    <rect x="770" y="230" width="60" height="260" rx="6"/>
+    <path d="M777 190 H823 V225 H777 Z"/>
+    <path d="M742 556 L765 500 H835 L858 556 Z"/>
+    <path d="M792 608 L800 565 L808 608 Z"/>
+  </g>
+
+  <!-- Re-outline key elements so edges stay bold and clean -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="40" y="248" width="655" height="270" rx="4"/>
+    <rect x="905" y="248" width="655" height="270" rx="4"/>
+    <rect x="765" y="225" width="70" height="270" rx="8"/>
+    <path d="M778 225 V188 H822 V225"/>
+    <path d="M765 495 L735 560 H865 L835 495"/>
+    <path d="M800 560 V615"/>
+    <path d="M765 560 L800 615 L835 560"/>
+  </g>
+</svg>

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import LoadingScreen from './LoadingScreen'
 import HeroVideo from './HeroVideo'
 import SpaceXScrollRevealGallery from './SpaceXScrollRevealGallery'
-import SystemsTimeline from './SystemsTimeline'
 
 function App() {
   const [isLoading, setIsLoading] = useState(true)
@@ -16,9 +15,6 @@ function App() {
 
       {/* Screen 2 — Vertical scroll-reveal gallery (6 SpaceX milestones) */}
       <SpaceXScrollRevealGallery ready={!isLoading} />
-
-      {/* Screen 3 — Systems Timeline (replaces StarlinkReveal; ready prop preserved per DESIGN_SYSTEM.md §5.1) */}
-      <SystemsTimeline ready={!isLoading} />
 
       {/* Loading Overlay */}
       {isLoading && (

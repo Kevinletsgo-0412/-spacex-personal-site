@@ -4,4 +4,6 @@ dist/
 .env
 tsconfig.tsbuildinfo
 *.mov
+.playwright-cli/
+.vercel/
 node_modules/

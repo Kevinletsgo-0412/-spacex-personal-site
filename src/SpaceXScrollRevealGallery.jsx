@@ -2,9 +2,24 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
+import SystemsTimeline, {
+  SYSTEMS_SCROLL_RANGE_VH,
+  SYSTEMS_TIMELINE_DURATION,
+} from './SystemsTimeline'
 import './SpaceXScrollRevealGallery.css'
 
 gsap.registerPlugin(ScrollTrigger)
+
+const FINAL_SLIDE_EXIT_VH = 210
+const FINAL_SLIDE_EXIT_SCALE = 0.45
+const FINAL_SLIDE_EXIT_Y = -62
+const FINAL_TITLE_FADE_START_RATIO = 0
+const FINAL_TITLE_FADE_END_RATIO = 1
+const SLIDE_ENTRY_DURATION = 0.65
+const SLIDE_HOLD_DURATION = 0.26
+const SLIDE_PEEK_DURATION = 0.18
+const ARCHIVE_SCRUB = true
+const SYSTEMS_VISIBLE_FROM_PROGRESS = 0
 
 /* ━━━ Intro text (hero headline, three lines) ━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const INTRO_LINES = [
@@ -114,6 +129,36 @@ const SLIDES = [
   },
 ]
 
+const ARCHIVE_INTRO_VH = 240
+const ARCHIVE_SLIDE_VH = 150
+const ARCHIVE_SPACER_VH =
+  ARCHIVE_INTRO_VH + SLIDES.length * ARCHIVE_SLIDE_VH + FINAL_SLIDE_EXIT_VH
+const ARCHIVE_SCROLL_RANGE_VH = ARCHIVE_SPACER_VH - 100
+const SLIDE_STRIDE = SLIDE_ENTRY_DURATION + SLIDE_HOLD_DURATION
+const ARCHIVE_INTRO_DURATION =
+  (ARCHIVE_INTRO_VH / ARCHIVE_SLIDE_VH) * SLIDE_STRIDE
+const FINAL_SLIDE_EXIT_DURATION =
+  (FINAL_SLIDE_EXIT_VH / ARCHIVE_SLIDE_VH) * SLIDE_STRIDE
+const FINAL_SLIDE_EXIT_START_TIME =
+  ARCHIVE_INTRO_DURATION +
+  (SLIDES.length - 1) * SLIDE_STRIDE +
+  SLIDE_ENTRY_DURATION +
+  SLIDE_HOLD_DURATION
+const ARCHIVE_TIMELINE_DURATION =
+  FINAL_SLIDE_EXIT_START_TIME + FINAL_SLIDE_EXIT_DURATION
+const FINAL_SLIDE_EXIT_START_VH =
+  (FINAL_SLIDE_EXIT_START_TIME / ARCHIVE_TIMELINE_DURATION) *
+  ARCHIVE_SCROLL_RANGE_VH
+const FINAL_SLIDE_EXIT_SCROLL_VH =
+  ARCHIVE_SCROLL_RANGE_VH - FINAL_SLIDE_EXIT_START_VH
+const SYSTEMS_ENTRY_OFFSET_TIME =
+  (FINAL_SLIDE_EXIT_SCROLL_VH / SYSTEMS_SCROLL_RANGE_VH) *
+  SYSTEMS_TIMELINE_DURATION
+const SYSTEMS_EMBED_START_OFFSET_VH = FINAL_SLIDE_EXIT_START_VH
+const SYSTEMS_EMBED_SCROLL_RANGE_VH =
+  SYSTEMS_SCROLL_RANGE_VH + FINAL_SLIDE_EXIT_SCROLL_VH
+const COMBINED_SPACER_VH = ARCHIVE_SPACER_VH + SYSTEMS_SCROLL_RANGE_VH
+
 /* ━━━ Word splitter — each word is a single inline-block GSAP target.
        CSS parks it at translateY(0.5em)+opacity:0; the timeline scrubs
        it back to its natural position.                                 ━━ */
@@ -204,6 +249,7 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
     const ctx = gsap.context(() => {
       const slides = slideRefs.current.filter(Boolean)
       const spacer = spacerRef.current
+      const archiveHeader = sectionRef.current?.querySelector('.srg-header')
       if (!slides.length || !spacer) return
 
       /* ── Timing knobs (timeline units) ─────────────────────────────
@@ -211,18 +257,18 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
        * Stride between consecutive slides equals ENTRY + HOLD. EXIT is
        * derived (ENTRY − PEEK) so slide i+1 reaches centre exactly when
        * slide i finishes exiting. */
-      const ENTRY = 0.65        // Phase A — image rises to centre
-      const HOLD = 0.26         // Phase B — image LOCKED, caption reveals
-      const PEEK = 0.18         // Phase C — image LOCKED, next slide peeks
+      const ENTRY = SLIDE_ENTRY_DURATION // Phase A — image rises to centre
+      const HOLD = SLIDE_HOLD_DURATION   // Phase B — image LOCKED, caption reveals
+      const PEEK = SLIDE_PEEK_DURATION   // Phase C — image LOCKED, next slide peeks
       const EXIT = ENTRY - PEEK // Phase D — image retreats while next rises
-      const STRIDE = ENTRY + HOLD
-      const SLIDE_VH = 150
+      const STRIDE = SLIDE_STRIDE
+      const FINAL_EXIT = FINAL_SLIDE_EXIT_DURATION
 
       /* Match the localhost:5199 archive intro budget: 240vh. Its GSAP
        * duration is derived from the slide stride ratio so extending the
        * intro does not materially change the six image phase speed. */
-      const INTRO_VH = 240
-      const INTRO_DURATION = (INTRO_VH / SLIDE_VH) * STRIDE
+      const INTRO_VH = ARCHIVE_INTRO_VH
+      const INTRO_DURATION = ARCHIVE_INTRO_DURATION
 
       const FROM_Y = 100
       const EXIT_Y = -45
@@ -231,11 +277,9 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
       const CLIP_FROM = 'inset(30% 12% 30% 12%)'
       const CLIP_TO = 'inset(0% 0% 0% 0%)'
 
-      /* Scroll budget — intro occupies INTRO_VH, then each slide cycle
-       * consumes SLIDE_VH of fresh scroll. TAIL_VH covers the last
-       * slide's hold + caption reveal before sticky releases. */
-      const TAIL_VH = 60
-      spacer.style.height = `${INTRO_VH + slides.length * SLIDE_VH + TAIL_VH}vh`
+      /* Scroll budget — intro + slides occupy the archive range; the same
+       * sticky stage then continues into the embedded systems timeline. */
+      spacer.style.height = `${COMBINED_SPACER_VH}vh`
 
       /* Initial poses.
        *
@@ -257,6 +301,7 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
         }
         if (words.length) gsap.set(words, { yPercent: 50, autoAlpha: 0 })
       })
+      if (archiveHeader) gsap.set(archiveHeader, { autoAlpha: 1 })
 
       /* Intro initial state — letters start unfilled, container at origin. */
       const introContainer = introRef.current
@@ -268,7 +313,6 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
         introContainer ? introContainer.querySelectorAll('[data-intro-line="1"] .srg-intro-letter') : []
       const line3Letters =
         introContainer ? introContainer.querySelectorAll('[data-intro-line="2"] .srg-intro-letter') : []
-
       if (introLetterEls.length) {
         gsap.set(introLetterEls, {
           '--letter-fill': 0,
@@ -280,7 +324,6 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
         gsap.set(line1Letters, {
           y: 38,
           rotateX: 72,
-          scaleX: 0.62,
         })
       }
       if (line2Letters.length) {
@@ -298,7 +341,6 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
         })
       }
       if (introContainer) gsap.set(introContainer, { yPercent: 0, opacity: 1 })
-
       /* Master timeline. Intro occupies 0→INTRO_DURATION, then slides
        * occupy INTRO_DURATION→end. The timeline is scrubbed by the
        * section spacer. */
@@ -307,8 +349,8 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
         scrollTrigger: {
           trigger: spacer,
           start: 'top top',
-          end: 'bottom bottom',
-          scrub: 0.6,
+          end: () => `+=${(ARCHIVE_SCROLL_RANGE_VH / 100) * window.innerHeight}`,
+          scrub: ARCHIVE_SCRUB,
           invalidateOnRefresh: true,
         },
       })
@@ -346,7 +388,6 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
                 autoAlpha: 1,
                 y: 0,
                 rotateX: 0,
-                scaleX: 1,
                 duration,
                 ease: 'power1.inOut',
               },
@@ -462,10 +503,9 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
          * so the bottom of the viewport now shows the next letterbox
          * climbing while this slide remains locked at centre). ── */
 
-        /* ── Phase D — Exit. Skipped for the last slide so it stays on
-         * screen as Page 2 hands off to Page 3. All three changes (up,
-         * smaller, fade) run on a single linear scrub so they're truly
-         * synchronous. */
+        /* ── Phase D — Exit. For slides 1→5 this crossfades into the next
+         * archive image. The final slide uses the same scrubbed up + shrink
+         * + fade motion before the embedded systems timeline begins. */
         if (wrap && i < slides.length - 1) {
           tl.to(
             wrap,
@@ -478,19 +518,49 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
             },
             t + ENTRY + HOLD + PEEK,
           )
+        } else if (wrap) {
+          const finalExitStart = t + ENTRY + HOLD
+          tl.to(
+            wrap,
+            {
+              yPercent: FINAL_SLIDE_EXIT_Y,
+              scale: FINAL_SLIDE_EXIT_SCALE,
+              opacity: 0,
+              duration: FINAL_EXIT,
+              ease: 'none',
+            },
+            finalExitStart,
+          )
+          if (archiveHeader) {
+            const fadeStart =
+              finalExitStart + FINAL_EXIT * FINAL_TITLE_FADE_START_RATIO
+            const fadeDuration =
+              FINAL_EXIT *
+              (FINAL_TITLE_FADE_END_RATIO - FINAL_TITLE_FADE_START_RATIO)
+            tl.to(
+              archiveHeader,
+              {
+                autoAlpha: 0,
+                duration: fadeDuration,
+                ease: 'none',
+              },
+              fadeStart,
+            )
+          }
         }
       })
 
       /* Index readout — flips at the midpoint of each slide's hold window.
        * Positions are offset by INTRO_VH to skip the intro scroll range. */
       slides.forEach((_, i) => {
-        const total = INTRO_VH + slides.length * SLIDE_VH + TAIL_VH
-        const startVh = INTRO_VH + i * SLIDE_VH + SLIDE_VH * 0.45
-        const endVh = INTRO_VH + (i + 1) * SLIDE_VH + SLIDE_VH * 0.05
+        const startVh =
+          INTRO_VH + i * ARCHIVE_SLIDE_VH + ARCHIVE_SLIDE_VH * 0.45
+        const endVh =
+          INTRO_VH + (i + 1) * ARCHIVE_SLIDE_VH + ARCHIVE_SLIDE_VH * 0.05
         ScrollTrigger.create({
           trigger: spacer,
-          start: () => `top+=${(startVh / total) * spacer.offsetHeight} top`,
-          end: () => `top+=${(endVh / total) * spacer.offsetHeight} top`,
+          start: () => `top+=${(startVh / 100) * window.innerHeight} top`,
+          end: () => `top+=${(endVh / 100) * window.innerHeight} top`,
           onToggle: (self) => {
             if (self.isActive && indexEl.current) {
               const n = String(i + 1).padStart(2, '0')
@@ -585,6 +655,15 @@ export default function SpaceXScrollRevealGallery({ ready = true }) {
               </div>
             </article>
           ))}
+          <SystemsTimeline
+            ready={ready}
+            embedded
+            scrollTriggerRef={spacerRef}
+            startOffsetVh={SYSTEMS_EMBED_START_OFFSET_VH}
+            scrollRangeVh={SYSTEMS_EMBED_SCROLL_RANGE_VH}
+            visibleFromProgress={SYSTEMS_VISIBLE_FROM_PROGRESS}
+            entryOffsetTime={SYSTEMS_ENTRY_OFFSET_TIME}
+          />
         </div>
       </div>
     </section>

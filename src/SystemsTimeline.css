@@ -1,7 +1,8 @@
 /* SystemsTimeline — Page 3 / Starship Manifest video field log. */
 
-.systems-timeline-section {
-  --systems-bg: #f5f5f7;
+.systems-timeline-section,
+.systems-timeline-embedded {
+  --systems-bg: var(--spacex-page-bg);
   --systems-ink: #0a0a0a;
   --systems-axis: rgba(0, 0, 0, 0.88);
   --systems-blue: #1f5a99;
@@ -10,11 +11,26 @@
   --systems-media-left: 29vw;
   --systems-media-right: 2vw;
 
-  position: relative;
   width: 100%;
-  min-height: var(--systems-section-min-height, 1450vh);
   background: var(--systems-bg);
   color: var(--systems-ink);
+}
+
+.systems-timeline-section {
+  position: relative;
+  min-height: var(--systems-section-min-height, 1450vh);
+}
+
+.systems-timeline-embedded {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .systems-timeline-sticky {
@@ -24,6 +40,33 @@
   height: 100vh;
   overflow: hidden;
   background: var(--systems-bg);
+}
+
+.systems-timeline-embedded .systems-timeline-sticky {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  background: transparent;
+}
+
+.systems-starlink-svg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.systems-starlink-svg {
+  display: block;
+  width: min(76vw, 980px);
+  height: auto;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  user-select: none;
 }
 
 /* ─── Persistent archive header ───────────────────────────────────── */
@@ -55,6 +98,32 @@
 .systems-timeline-header-title {
   color: rgba(0, 0, 0, 0.85);
   font-weight: 600;
+}
+
+.systems-timeline-header-ink {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.systems-timeline-header-letter {
+  --header-letter-fill: 0;
+  display: inline-block;
+  color: transparent;
+  opacity: 0;
+  background-image: linear-gradient(
+    to right,
+    var(--systems-ink) calc(var(--header-letter-fill, 0) * 100%),
+    transparent calc(var(--header-letter-fill, 0) * 100%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  will-change: opacity, background-image;
+}
+
+.systems-timeline-header-space {
+  display: inline-block;
+  width: 0.58em;
 }
 
 .systems-timeline-header-divider {
@@ -332,6 +401,31 @@
   width: 0.28em;
 }
 
+/* ─── Closing Starlink transition text ────────────────────────────── */
+.st-closing-line {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  display: block;
+  white-space: nowrap;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.st-closing-char {
+  display: inline-block;
+  color: #d9d9d9;
+  opacity: 0.06;
+  transform: translateX(0.55em) skewX(-12deg) scaleX(0.94);
+  transform-origin: 50% 75%;
+  will-change: transform, opacity, color;
+}
+
+.st-closing-space {
+  display: inline-block;
+  width: 0.22em;
+}
+
 /* ─── Video frame ─────────────────────────────────────────────────── */
 .systems-timeline-media {
   position: absolute;
@@ -367,7 +461,8 @@
 }
 
 @media (min-width: 901px) and (max-width: 1100px) {
-  .systems-timeline-section {
+  .systems-timeline-section,
+  .systems-timeline-embedded {
     --systems-media-left: 32vw;
   }
 

@@ -18,9 +18,11 @@
  */
 
 .srg-section {
+  --srg-bg: var(--spacex-page-bg);
+
   position: relative;
   width: 100%;
-  background: #F7F5EF;
+  background: var(--srg-bg);
   color: #0a0a0a;
 }
 
@@ -37,7 +39,7 @@
   width: 100%;
   height: 100vh;
   overflow: hidden;
-  background: #F7F5EF;
+  background: var(--srg-bg);
   /* True centring of the slide stack. Slides themselves use inset:0 so
    * they fill the stage; the image inside each slide is then flex-centred
    * inside the slide for pixel-accurate centre alignment. */
@@ -270,6 +272,10 @@
 
 .srg-intro-line-1 {
   font-size: clamp(4.1rem, 10.2vw, 10.5rem);
+  font-weight: 900;
+  font-stretch: 125%;
+  font-variation-settings: "wght" 900, "wdth" 125;
+  letter-spacing: normal;
   text-transform: uppercase;
 }
 
@@ -312,7 +318,7 @@
 }
 
 .srg-intro-line-1 .srg-intro-letter {
-  transform: translateY(38px) rotateX(72deg) scaleX(0.62);
+  transform: translateY(38px) rotateX(72deg);
 }
 
 .srg-intro-line-2 .srg-intro-letter {
